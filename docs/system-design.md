@@ -6,6 +6,8 @@
 - Tailwind CSS with Radix UI primitives.
 - HTTP-only signed cookie sessions.
 - JSON persistence at `data/footlove-db.json` for local development.
+- Transactional MySQL/MariaDB document persistence in production when
+  `DATABASE_URL` is configured.
 
 ## Roles
 
