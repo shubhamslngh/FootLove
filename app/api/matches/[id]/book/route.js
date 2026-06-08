@@ -13,6 +13,9 @@ export async function POST(request, { params }) {
   const body = await parseJson(request);
   const slotRole = String(body?.slotRole || "Any role").trim();
   const paymentReference = String(body?.paymentReference || "").trim();
+  if (!paymentReference) {
+    return fail("Enter the UPI transaction reference after payment");
+  }
   let booking;
 
   await updateDb((db) => {

@@ -29,11 +29,11 @@ export function BookingApprovalActions({ bookingId }) {
 
   return (
     <div className="grid gap-2">
-      <div className="flex gap-2">
-        <Button size="sm" disabled={Boolean(loadingAction)} onClick={() => updateStatus("confirm")}>
-          <Check /> {loadingAction === "confirm" ? "Confirming..." : "Confirm"}
+      <div className="grid grid-cols-2 gap-2">
+        <Button className="w-full" size="sm" disabled={Boolean(loadingAction)} onClick={() => updateStatus("confirm")}>
+          <Check /> {loadingAction === "confirm" ? "Confirming..." : "Confirm booking"}
         </Button>
-        <Button size="sm" variant="outline" disabled={Boolean(loadingAction)} onClick={() => updateStatus("reject")}>
+        <Button className="w-full text-red-600 dark:text-red-400" size="sm" variant="outline" disabled={Boolean(loadingAction)} onClick={() => updateStatus("reject")}>
           <X /> {loadingAction === "reject" ? "Rejecting..." : "Reject"}
         </Button>
       </div>

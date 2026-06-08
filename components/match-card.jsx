@@ -71,6 +71,8 @@ export function MatchCard({
   showPending = false,
   href,
   preview = false,
+  showDetails = false,
+  hideViewDetails = false,
 }) {
   const [shareStatus, setShareStatus] = useState("");
   const [expanded, setExpanded] = useState(false);
@@ -217,7 +219,7 @@ export function MatchCard({
           }`}>
           <div className="min-h-0">
             <div className="grid gap-3 border-t border-border pt-3">
-              {isPlayerCard && (
+              {(isPlayerCard || showDetails) && (
                 <div className="overflow-hidden rounded-xl bg-secondary">
                   <div className="border-b border-border p-3">
                     <p className="text-xs font-bold uppercase text-muted-foreground">
@@ -267,18 +269,21 @@ export function MatchCard({
               )}
         <div className="grid gap-2">
           <div className="grid grid-cols-[1fr_auto] gap-2">
-            <Button asChild size="sm">
-              <Link href={detailHref} className="w-full justify-center">
-                View details
-              </Link>
-            </Button>
+            {!hideViewDetails && (
+              <Button asChild size="sm">
+                <Link href={detailHref} className="w-full justify-center">
+                  View details
+                </Link>
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
               onClick={shareMatch}
-              className="w-9 shrink-0 px-0"
+              className={hideViewDetails ? "w-full" : "w-9 shrink-0 px-0"}
               aria-label="Share match">
               <Share2 />
+              {hideViewDetails && "Share match"}
             </Button>
           </div>
           {shareStatus && (
@@ -288,12 +293,15 @@ export function MatchCard({
           )}
         </div>
 
-        {canBook && (
-          <BookingActions match={match} existingBooking={existingBooking} />
-        )}
             </div>
           </div>
         </div>}
+        {canBook && (
+          <BookingActions
+            match={{ ...match, pendingCount }}
+            existingBooking={existingBooking}
+          />
+        )}
       </CardContent>
     </Card>
   );

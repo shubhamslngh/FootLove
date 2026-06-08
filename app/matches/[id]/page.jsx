@@ -1,15 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, Clock3, MapPin, Swords, Users } from "lucide-react";
+import { Swords } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { MatchCard } from "@/components/match-card";
+import { MatchManagementActions } from "@/components/match-management-actions";
 import { PlayerRosterItem } from "@/components/player-roster-item";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/server/auth";
 import { readDb, withVenue, publicUser } from "@/lib/server/db";
-import { formatDisplayDate } from "@/lib/utils";
 import { canManagePlatform } from "@/lib/server/roles";
 
 export default async function MatchDetailPage({ params }) {
@@ -42,6 +43,7 @@ export default async function MatchDetailPage({ params }) {
   const remaining = Math.max(0, match.capacity - match.booked - pendingCount);
   const canScore =
     match.hostUserId === user.id || canManagePlatform(user.role);
+  const canManage = canScore;
 
   return (
     <AppShell user={user}>
@@ -79,50 +81,35 @@ export default async function MatchDetailPage({ params }) {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
-          <Card className="overflow-hidden bg-card/95 shadow-[0_24px_120px_rgba(59,130,246,0.12)] ring-1 ring-border">
-            <CardHeader>
-              <CardTitle className="text-lg">Match details</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3 text-sm text-muted-foreground">
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground">When</p>
+          <div className="grid content-start gap-3">
+            <MatchCard
+              match={matchWithVenue}
+              pendingCount={pendingCount}
+              showPending={canManage}
+              showDetails
+              hideViewDetails
+            />
+            <Card>
+              <CardContent className="grid gap-2 p-4 text-sm">
                 <p>
-                  {formatDisplayDate(match.date)} · {match.time}
+                  <span className="font-semibold">Hosted by:</span>{" "}
+                  {host?.name ?? "Unknown host"}
                 </p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground">Where</p>
                 <p>
-                  {matchWithVenue.venue?.name || "Venue"}
-                  {matchWithVenue.venue?.area
-                    ? `, ${matchWithVenue.venue.area}`
-                    : ""}
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground">Capacity</p>
-                <p>
-                  {match.booked}/{match.capacity} players
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground">Slots remaining</p>
-                <p>{remaining}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground">Hosted by</p>
-                <p>{host?.name ?? "Unknown host"}</p>
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold text-foreground">Slot roles</p>
-                <p>
+                  <span className="font-semibold">Available roles:</span>{" "}
                   {Array.isArray(match.slotRoles)
                     ? match.slotRoles.join(", ")
                     : String(match.slotRoles || "Any role")}
                 </p>
-              </div>
-            </CardContent>
-          </Card>
+                {match.notes && (
+                  <p>
+                    <span className="font-semibold">Notes:</span> {match.notes}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+            {canManage && <MatchManagementActions match={match} />}
+          </div>
 
           <Card className="overflow-hidden bg-card/95 ring-1 ring-border">
             <CardHeader>

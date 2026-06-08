@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, QrCode, Send } from "lucide-react";
+import { ArrowLeft, CreditCard, QrCode, Send, Ticket } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import {
 
 export function BookingActions({ match, existingBooking }) {
   const router = useRouter();
+  const [step, setStep] = useState("start");
   const [slotRole, setSlotRole] = useState(match.slotRoles?.[0] || "Any role");
   const [paymentReference, setPaymentReference] = useState("");
   const [showQr, setShowQr] = useState(false);
@@ -81,63 +82,107 @@ export function BookingActions({ match, existingBooking }) {
     );
   }
 
+  if (step === "start") {
+    return (
+      <Button
+        type="button"
+        className="w-full"
+        onClick={() => setStep("slot")}>
+        <Ticket />
+        Book slot
+      </Button>
+    );
+  }
+
   return (
     <div className="grid gap-3 rounded-2xl bg-secondary p-3">
-      <div className="grid gap-2">
-        <p className="text-sm font-bold">Book slot</p>
-        <Select value={slotRole} onValueChange={setSlotRole}>
-          <SelectTrigger>
-            <SelectValue placeholder="Select slot" />
-          </SelectTrigger>
-          <SelectContent>
-            {(match.slotRoles?.length ? match.slotRoles : ["Any role"]).map(
-              (role) => (
-                <SelectItem key={role} value={role}>
-                  {role}
-                </SelectItem>
-              ),
-            )}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Button asChild size="sm">
-          <a href={paymentHref}>
-            <CreditCard /> Pay UPI
-          </a>
-        </Button>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold">
+            {step === "slot" ? "1. Choose your slot" : "2. Complete payment"}
+          </p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {step === "slot"
+              ? "Select the role you want to play."
+              : `Pay ₹${match.price} and enter the transaction reference.`}
+          </p>
+        </div>
         <Button
           type="button"
           size="sm"
-          variant="outline"
-          onClick={() => setShowQr((current) => !current)}>
-          <QrCode /> QR
+          variant="ghost"
+          onClick={() => setStep(step === "payment" ? "slot" : "start")}>
+          <ArrowLeft />
+          Back
         </Button>
       </div>
-      <Input
-        value={paymentReference}
-        onChange={(event) => setPaymentReference(event.target.value)}
-        placeholder="UPI reference ID"
-      />
-      <Button
-        type="button"
-        size="sm"
-        variant="secondary"
-        disabled={loading}
-        onClick={bookSlot}>
-        <Send /> {loading ? "Submitting..." : "Mark paid"}
-      </Button>
-      {showQr && (
-        <div className="grid justify-items-start gap-2">
-          <img
-            className="rounded-2xl bg-white p-2 shadow-[0_8px_22px_rgba(17,24,39,0.08)] ring-1 ring-border"
-            src={qrUrl}
-            alt="UPI payment QR code"
-            width="180"
-            height="180"
+
+      {step === "slot" ? (
+        <>
+          <Select value={slotRole} onValueChange={setSlotRole}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select slot" />
+            </SelectTrigger>
+            <SelectContent>
+              {(match.slotRoles?.length ? match.slotRoles : ["Any role"]).map(
+                (role) => (
+                  <SelectItem key={role} value={role}>
+                    {role}
+                  </SelectItem>
+                ),
+              )}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setStep("payment")}>
+            Continue to payment
+          </Button>
+        </>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-2">
+            <Button asChild size="sm">
+              <a href={paymentHref}>
+                <CreditCard /> Pay ₹{match.price}
+              </a>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setShowQr((current) => !current)}>
+              <QrCode /> {showQr ? "Hide QR" : "Show QR"}
+            </Button>
+          </div>
+          {showQr && (
+            <div className="grid justify-items-center gap-2 rounded-xl bg-card p-3">
+              <img
+                className="rounded-2xl bg-white p-2 shadow-[0_8px_22px_rgba(17,24,39,0.08)] ring-1 ring-border"
+                src={qrUrl}
+                alt="UPI payment QR code"
+                width="180"
+                height="180"
+              />
+              <p className="text-xs text-muted-foreground">UPI ID: {upiId}</p>
+            </div>
+          )}
+          <Input
+            value={paymentReference}
+            onChange={(event) => setPaymentReference(event.target.value)}
+            placeholder="Enter UPI transaction reference"
           />
-          <p className="text-xs text-muted-foreground">UPI ID: {upiId}</p>
-        </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            disabled={loading || !paymentReference.trim()}
+            onClick={bookSlot}>
+            <Send />{" "}
+            {loading ? "Submitting..." : "Confirm payment and book"}
+          </Button>
+        </>
       )}
       {message && (
         <p className="text-sm font-semibold text-muted-foreground">{message}</p>

@@ -49,28 +49,30 @@ const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
   return { value, label: value };
 });
 
-export function HostMatchForm({ venues, paymentMethod }) {
+export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
   const router = useRouter();
   const [venueList, setVenueList] = useState(venues);
   const approvedVenues = venueList.filter((venue) => !venue.status || venue.status === "approved");
-  const [venueId, setVenueId] = useState(approvedVenues[0]?.id || "");
+  const [venueId, setVenueId] = useState(initialMatch?.venueId || approvedVenues[0]?.id || "");
   const [activeStep, setActiveStep] = useState("details");
-  const [format, setFormat] = useState("7v7");
-  const [level, setLevel] = useState("Open");
+  const [format, setFormat] = useState(initialMatch?.format || "7v7");
+  const [level, setLevel] = useState(initialMatch?.level || "Open");
   const [showVenueForm, setShowVenueForm] = useState(false);
   const [match, setMatch] = useState({
-    title: "",
-    homeTeam: "",
-    awayTeam: "",
-    date: "",
-    time: "",
-    price: "",
-    upiId: paymentMethod?.upiId || "",
-    upiPayeeName: paymentMethod?.payeeName || "",
-    paymentLink: "",
-    qrCodeDataUrl: paymentMethod?.qrCodeDataUrl || "",
-    slotRoles: "",
-    notes: "",
+    title: initialMatch?.title || "",
+    homeTeam: initialMatch?.homeTeam || "",
+    awayTeam: initialMatch?.awayTeam || "",
+    date: initialMatch?.date || "",
+    time: initialMatch?.time || "",
+    price: initialMatch?.price || "",
+    upiId: paymentMethod?.upiId || initialMatch?.upiId || "",
+    upiPayeeName: paymentMethod?.payeeName || initialMatch?.upiPayeeName || "",
+    paymentLink: initialMatch?.paymentLink || "",
+    qrCodeDataUrl: paymentMethod?.qrCodeDataUrl || initialMatch?.qrCodeDataUrl || "",
+    slotRoles: Array.isArray(initialMatch?.slotRoles)
+      ? initialMatch.slotRoles.join(", ")
+      : initialMatch?.slotRoles || "",
+    notes: initialMatch?.notes || "",
   });
   const [message, setMessage] = useState("");
   const [venueMessage, setVenueMessage] = useState("");
@@ -85,8 +87,10 @@ export function HostMatchForm({ venues, paymentMethod }) {
     setMessage("");
     setLoading(true);
 
-    const response = await fetch("/api/matches", {
-      method: "POST",
+    const response = await fetch(
+      initialMatch ? `/api/matches/${initialMatch.id}` : "/api/matches",
+      {
+      method: initialMatch ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: match.title,
@@ -105,17 +109,23 @@ export function HostMatchForm({ venues, paymentMethod }) {
         slotRoles: match.slotRoles,
         notes: match.notes,
       }),
-    });
+      },
+    );
 
     const result = await response.json();
     setLoading(false);
 
     if (!response.ok) {
-      setMessage(result?.error?.message || "Could not publish match");
+      setMessage(result?.error?.message || `Could not ${initialMatch ? "update" : "publish"} match`);
       return;
     }
 
-    setMessage("Match published");
+    setMessage(initialMatch ? "Match updated" : "Match published");
+    if (initialMatch) {
+      router.push("/matches");
+      router.refresh();
+      return;
+    }
     setMatch({
       title: "",
       homeTeam: "",
@@ -202,13 +212,13 @@ export function HostMatchForm({ venues, paymentMethod }) {
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="venue">Venue</TabsTrigger>
-          <TabsTrigger value="slots">Slots</TabsTrigger>
+          <TabsTrigger value="payment">Payment setup</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details">
           <Card>
             <CardHeader>
-              <CardTitle>Match details</CardTitle>
+              <CardTitle>{initialMatch ? "Edit match" : "Match details"}</CardTitle>
               <CardDescription>
                 Title, format, timing, price, and UPI destination.
               </CardDescription>
@@ -400,16 +410,24 @@ export function HostMatchForm({ venues, paymentMethod }) {
                   />
                 </div>
               )}
+              <Button
+                type="button"
+                className="w-full"
+                disabled={!venueId}
+                onClick={() => setActiveStep("payment")}>
+                <QrCode />
+                Continue to payment setup
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
 
-        <TabsContent value="slots">
+        <TabsContent value="payment">
           <Card>
             <CardHeader>
-              <CardTitle>Slots and payment</CardTitle>
+              <CardTitle>Payment setup</CardTitle>
               <CardDescription>
-                Control what players can book and how they pay.
+                Configure available roles and how players pay.
               </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">

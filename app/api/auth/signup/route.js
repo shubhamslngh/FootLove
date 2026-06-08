@@ -16,20 +16,20 @@ export async function POST(request) {
   const name = String(body?.name || "").trim();
   const username = String(body?.username || "").trim().toLowerCase();
   const phone = normalizeIndianPhone(body?.phone);
-  const password = String(body?.password || "");
+  const pin = String(body?.pin || "");
   const requestedRole = String(body?.role || ROLES.PLAYER).trim();
   const upiId = String(body?.upiId || "").trim();
   const upiPayeeName = String(body?.upiPayeeName || "").trim();
   const paymentQrDataUrl = String(body?.paymentQrDataUrl || "").trim();
 
-  if (!name || !username || !phone || !password) {
-    return fail("Name, username, phone, and password are required");
+  if (!name || !username || !phone || !pin) {
+    return fail("Name, username, phone, and PIN are required");
   }
   if (!/^[a-z0-9_]{3,20}$/.test(username)) {
     return fail("Username must be 3-20 characters using lowercase letters, numbers, or underscores");
   }
   if (!isValidIndianPhone(phone)) return fail("Enter a valid 10-digit Indian mobile number");
-  if (password.length < 8) return fail("Password must be at least 8 characters");
+  if (!/^\d{6}$/.test(pin)) return fail("PIN must be exactly 6 digits");
   if (![ROLES.PLAYER, ROLES.MANAGER].includes(requestedRole)) return fail("You can only create a player or manager account from signup");
   if (
     requestedRole === ROLES.MANAGER &&
@@ -74,7 +74,7 @@ export async function POST(request) {
       username,
       phone,
       role: requestedRole,
-      passwordHash: hashPassword(password),
+      passwordHash: hashPassword(pin),
       ...(requestedRole === ROLES.MANAGER
         ? {
             paymentMethod: {

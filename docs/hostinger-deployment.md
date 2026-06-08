@@ -23,6 +23,10 @@ Required production values:
 - `ADMIN_PHONE`
 - `ADMIN_PASSWORD`
 
+The checked-in `.env.example` is configured for a separate local MySQL
+database. Do not upload the local `.env`; configure Hostinger's own
+`DATABASE_URL` through its environment-variable panel.
+
 Use a database URL in this form:
 
 ```text
@@ -38,7 +42,10 @@ openssl rand -base64 48
 ```
 
 Keep `DB_BOOTSTRAP_FROM_FILE=false` for a clean production database. The first
-database connection creates the `app_state` table and the initial admin account.
+database connection creates normalized relational tables for users, payment
+methods, venues, matches, slot roles, bookings, match events, and notifications.
+If the legacy `app_state` table exists and the new `users` table is empty, its
+data is migrated automatically on startup.
 
 ## Build And Start
 
@@ -75,6 +82,6 @@ admin phone and password configured in the environment variables.
 
 ## File Uploads
 
-Payment QR images are currently stored as data URLs inside the database state.
+Payment QR images are currently stored as data URLs in `LONGTEXT` columns.
 Keep uploaded images small. For larger production usage, move uploads to object
 storage and store only their URLs.

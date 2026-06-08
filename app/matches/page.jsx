@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
-import { BookingApprovalActions } from "@/components/booking-approval-actions";
+import { PendingBookingCard } from "@/components/pending-booking-card";
 import { MatchCard } from "@/components/match-card";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -46,6 +46,25 @@ export default async function MatchesPage() {
           <h1 className="text-3xl font-bold tracking-normal">Hosted games</h1>
         </div>
 
+        {canHost && pendingBookings.length > 0 && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-primary">
+                  Action required
+                </p>
+                <h2 className="text-lg font-bold">Booking confirmations</h2>
+              </div>
+              <Badge variant="secondary">{pendingBookings.length}</Badge>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {pendingBookings.map((booking) => (
+                <PendingBookingCard key={booking.id} booking={booking} />
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="space-y-3">
           <h2 className="text-lg font-bold">Open matches</h2>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
@@ -89,42 +108,7 @@ export default async function MatchesPage() {
           </div>
         </section>
 
-        {canHost ? (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold">Pending approvals</h2>
-              <Badge variant="secondary">{pendingBookings.length}</Badge>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {pendingBookings.map((booking) => (
-                <Card key={booking.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between gap-3">
-                      <CardTitle className="text-lg">{booking.match.title}</CardTitle>
-                      <Badge>pending</Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-muted-foreground">
-                    <p>{booking.player.name} · {booking.player.phone}</p>
-                    <p>
-                      {formatDisplayDate(booking.match.date)} ·{" "}
-                      {booking.match.time}
-                    </p>
-                    <p>Slot: {booking.slotRole}</p>
-                    <p>Payment: {booking.paymentStatus || "pending"}</p>
-                    {booking.paymentReference && <p>Reference: {booking.paymentReference}</p>}
-                    <BookingApprovalActions bookingId={booking.id} />
-                  </CardContent>
-                </Card>
-              ))}
-              {!pendingBookings.length && (
-                <div className="rounded-[24px] bg-card p-5 text-sm font-semibold text-muted-foreground shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border md:col-span-2 lg:col-span-3">
-                  No bookings are pending confirmation.
-                </div>
-              )}
-            </div>
-          </section>
-        ) : (
+        {!canHost && (
           <section className="space-y-3">
             <h2 className="text-lg font-bold">Past matches</h2>
             <div className="rounded-[24px] bg-card p-5 text-sm font-semibold text-muted-foreground shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border">

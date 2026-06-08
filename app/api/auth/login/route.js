@@ -6,14 +6,16 @@ import { isValidIndianPhone, normalizeIndianPhone } from "@/lib/server/phone";
 
 export async function POST(request) {
   const body = await parseJson(request);
-  if (!body?.phone || !body?.password) return fail("Phone and password are required");
+  const pin = String(body?.pin || body?.password || "");
+  if (!body?.phone || !pin) return fail("Phone and PIN are required");
   if (!isValidIndianPhone(body.phone)) return fail("Enter a valid 10-digit Indian mobile number");
+  if (!/^\d{6}$/.test(pin)) return fail("PIN must be exactly 6 digits");
 
   const db = await readDb();
   const user = db.users.find((candidate) => normalizeIndianPhone(candidate.phone) === normalizeIndianPhone(body.phone));
 
-  if (!user || !verifyPassword(body.password, user.passwordHash)) {
-    return fail("Invalid login credentials", 401);
+  if (!user || !verifyPassword(pin, user.passwordHash)) {
+    return fail("Incorrect mobile number or PIN", 401);
   }
 
   await setSessionCookie(user);

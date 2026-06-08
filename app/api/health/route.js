@@ -6,7 +6,10 @@ export async function GET() {
     const db = await readDb();
     return ok({
       status: "healthy",
-      database: process.env.DATABASE_URL ? "mysql" : "file",
+      database:
+        process.env.DATABASE_MODE === "file" || !process.env.DATABASE_URL
+          ? "file"
+          : "mysql",
       counts: {
         users: db.users.length,
         venues: db.venues.length,

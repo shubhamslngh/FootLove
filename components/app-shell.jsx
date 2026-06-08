@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarPlus, LayoutDashboard, Trophy } from "lucide-react";
+import { CalendarPlus, LayoutDashboard, Trophy, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/components/logout-button";
@@ -11,6 +11,7 @@ const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/matches", label: "Matches", icon: Trophy },
   { href: "/host", label: "Host", icon: CalendarPlus },
+  { href: "/profile", label: "Profile", icon: UserRound },
 ];
 
 export function AppShell({ children, user }) {
@@ -46,7 +47,10 @@ export function AppShell({ children, user }) {
       <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6">{children}</div>
       {user?.role === ROLES.PLAYER && <PlayerNotifications />}
       <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[28px] bg-card/95 shadow-[0_18px_44px_rgba(17,24,39,0.18)] ring-1 ring-border backdrop-blur-xl lg:hidden">
-        <div className="grid grid-cols-3">
+        <div
+          className={`grid ${
+            canHost ? "grid-cols-4" : "grid-cols-3"
+          }`}>
           {navItems.filter((item) => item.href !== "/host" || canHost).map((item) => (
             <Link key={item.href} href={item.href} className="flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-bold text-muted-foreground">
               <item.icon className="size-5" />

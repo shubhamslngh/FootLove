@@ -16,6 +16,7 @@ import { HostVerificationActions } from "@/components/host-verification-actions"
 import { LottieAnimation } from "@/components/lottie-animation";
 import { ManagerApplicationForm } from "@/components/manager-application-form";
 import { MatchCard } from "@/components/match-card";
+import { PendingBookingCard } from "@/components/pending-booking-card";
 import { VenueApprovalActions } from "@/components/venue-approval-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ const playerCategories = [
     icon: Sparkles,
     tone: "bg-emerald-500/12 text-emerald-600 dark:text-emerald-300",
     animation: "/Football3.lottie",
+    href: "/matches",
   },
   {
     title: "Community",
@@ -44,6 +46,7 @@ const playerCategories = [
     icon: UsersRound,
     tone: "bg-sky-500/12 text-sky-600 dark:text-sky-300",
     animation: "/Football1.lottie",
+    href: "/communities",
   },
   {
     title: "Clubs",
@@ -51,6 +54,7 @@ const playerCategories = [
     icon: Shield,
     tone: "bg-violet-500/12 text-violet-600 dark:text-violet-300",
     animation: "/Football2.lottie",
+    href: "/clubs",
   },
 ];
 
@@ -154,7 +158,7 @@ export default async function DashboardPage() {
           return (
             <Link
               key={category.title}
-              href="/matches"
+              href={category.href}
               className="theme-reactive-card relative min-h-40 overflow-hidden rounded-2xl bg-card p-4 shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border transition active:scale-[0.98]">
               <LottieAnimation
                 src={category.animation}
@@ -265,6 +269,25 @@ export default async function DashboardPage() {
           </Button>
         </div>
       </div>
+
+      {canHost && pendingBookings.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-primary">
+                Action required
+              </p>
+              <h2 className="text-lg font-bold">Booking confirmations</h2>
+            </div>
+            <Badge variant="secondary">{pendingBookings.length}</Badge>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {pendingBookings.map((booking) => (
+              <PendingBookingCard key={booking.id} booking={booking} />
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
