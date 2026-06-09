@@ -87,7 +87,10 @@ export async function PUT(request, { params }) {
       ).trim(),
       paymentLink: String(body?.paymentLink || "").trim(),
       qrCodeDataUrl: String(
-        approvedPaymentMethod?.qrCodeDataUrl || body?.qrCodeDataUrl || match.qrCodeDataUrl || "",
+        body?.qrCodeDataUrl ||
+          approvedPaymentMethod?.qrCodeDataUrl ||
+          match.qrCodeDataUrl ||
+          "",
       ).trim(),
       slotRoles: String(body?.slotRoles || "Any role")
         .split(",")

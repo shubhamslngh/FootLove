@@ -51,7 +51,7 @@ export async function POST(request) {
   ).trim();
   const paymentLink = String(body?.paymentLink || "").trim();
   const qrCodeDataUrl = String(
-    approvedPaymentMethod?.qrCodeDataUrl || body?.qrCodeDataUrl || "",
+    body?.qrCodeDataUrl || approvedPaymentMethod?.qrCodeDataUrl || "",
   ).trim();
 
   if (!title || !homeTeam || !awayTeam || !venueId || !date || !time || !capacity || !price || !upiId) {

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, Clock3, IndianRupee, Link as LinkIcon, MapPinPlus, Plus, QrCode } from "lucide-react";
+import { CalendarDays, Clock3, IndianRupee, MapPinPlus, Plus, QrCode } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { MatchCard } from "@/components/match-card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { createPaymentQr, createUpiLink } from "@/lib/payment";
 
 function toDateValue(date) {
   const year = date.getFullYear();
@@ -68,7 +69,7 @@ export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
     upiId: paymentMethod?.upiId || initialMatch?.upiId || "",
     upiPayeeName: paymentMethod?.payeeName || initialMatch?.upiPayeeName || "",
     paymentLink: initialMatch?.paymentLink || "",
-    qrCodeDataUrl: paymentMethod?.qrCodeDataUrl || initialMatch?.qrCodeDataUrl || "",
+    qrCodeDataUrl: initialMatch?.qrCodeDataUrl || "",
     slotRoles: Array.isArray(initialMatch?.slotRoles)
       ? initialMatch.slotRoles.join(", ")
       : initialMatch?.slotRoles || "",
@@ -87,6 +88,17 @@ export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
     setMessage("");
     setLoading(true);
 
+    const upiId = paymentMethod?.upiId || match.upiId;
+    const upiPayeeName = paymentMethod?.payeeName || match.upiPayeeName;
+    const paymentOptions = {
+      amount: match.price,
+      note: `${match.title} slot`,
+      upiId,
+      payeeName: upiPayeeName,
+    };
+    const paymentLink = createUpiLink(paymentOptions);
+    const qrCodeDataUrl = await createPaymentQr(paymentOptions);
+
     const response = await fetch(
       initialMatch ? `/api/matches/${initialMatch.id}` : "/api/matches",
       {
@@ -101,10 +113,10 @@ export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
         date: match.date,
         time: match.time,
         price: match.price,
-        upiId: match.upiId,
-        upiPayeeName: match.upiPayeeName,
-        paymentLink: match.paymentLink,
-        qrCodeDataUrl: match.qrCodeDataUrl,
+        upiId,
+        upiPayeeName,
+        paymentLink,
+        qrCodeDataUrl,
         venueId,
         slotRoles: match.slotRoles,
         notes: match.notes,
@@ -136,7 +148,7 @@ export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
       upiId: paymentMethod?.upiId || "",
       upiPayeeName: paymentMethod?.payeeName || "",
       paymentLink: "",
-      qrCodeDataUrl: paymentMethod?.qrCodeDataUrl || "",
+      qrCodeDataUrl: "",
       slotRoles: "",
       notes: "",
     });
@@ -178,15 +190,6 @@ export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
     form.reset();
     setShowVenueForm(false);
     router.refresh();
-  }
-
-  function uploadQrCode(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = () => updateMatch("qrCodeDataUrl", String(reader.result || ""));
-    reader.readAsDataURL(file);
   }
 
   const selectedVenue = venueList.find((venue) => venue.id === venueId);
@@ -440,16 +443,10 @@ export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
                   placeholder="Forward, Midfield, Defender, Goalkeeper"
                 />
               </Field>
-              <IconField icon={LinkIcon} label="Payment link">
-                <Input
-                  value={match.paymentLink}
-                  onChange={(event) =>
-                    updateMatch("paymentLink", event.target.value)
-                  }
-                  type="url"
-                  placeholder="https://pay.example.com/match"
-                />
-              </IconField>
+              <div className="rounded-2xl bg-secondary p-3 text-sm text-muted-foreground">
+                The UPI payment link and amount-specific QR code are generated
+                automatically when you publish the match.
+              </div>
               {paymentMethod ? (
                 <div className="overflow-hidden rounded-2xl bg-foreground p-4 text-background shadow-[0_16px_34px_rgba(17,24,39,0.18)]">
                   <div className="flex items-start justify-between gap-4">
@@ -473,13 +470,7 @@ export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
                         {paymentMethod.upiId}
                       </p>
                     </div>
-                    {paymentMethod.qrCodeDataUrl && (
-                      <img
-                        className="size-24 shrink-0 rounded-xl bg-white object-contain p-2"
-                        src={paymentMethod.qrCodeDataUrl}
-                        alt="Verified payment QR code"
-                      />
-                    )}
+                    <QrCode className="size-20 shrink-0 rounded-xl bg-white p-4 text-foreground" />
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t border-background/15 pt-3 text-xs">
                     <span className="text-background/65">FootLove Host</span>
@@ -511,25 +502,6 @@ export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
                       />
                     </Field>
                   </div>
-                  <Field label="Upload payment QR">
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={uploadQrCode}
-                    />
-                  </Field>
-                  {match.qrCodeDataUrl && (
-                    <div className="flex items-center gap-3 text-sm font-semibold text-muted-foreground">
-                      <img
-                        className="size-16 rounded-2xl bg-white object-cover p-1 shadow-[0_8px_22px_rgba(17,24,39,0.08)] ring-1 ring-border"
-                        src={match.qrCodeDataUrl}
-                        alt="Uploaded payment QR code"
-                      />
-                      <span className="flex items-center gap-2">
-                        <QrCode className="size-4" /> QR attached
-                      </span>
-                    </div>
-                  )}
                 </div>
               )}
               <Field label="Manager notes">

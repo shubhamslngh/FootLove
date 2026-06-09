@@ -18,13 +18,13 @@ export async function POST(request) {
   const qrCodeDataUrl = String(body?.paymentQrDataUrl || "").trim();
 
   if (!upiId || !payeeName || !qrCodeDataUrl) {
-    return fail("UPI ID, payee name, and payment QR code are required");
+    return fail("UPI ID and payee name are required");
   }
   if (!UPI_PATTERN.test(upiId)) {
     return fail("Enter a valid UPI ID, for example player@upi");
   }
   if (!qrCodeDataUrl.startsWith("data:image/")) {
-    return fail("Upload a valid payment QR image");
+    return fail("Could not generate a valid payment QR");
   }
 
   let applicant;

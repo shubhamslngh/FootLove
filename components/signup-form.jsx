@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { createPaymentQr } from "@/lib/payment";
 
 export function SignupForm() {
   const router = useRouter();
@@ -28,7 +29,6 @@ export function SignupForm() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [role, setRole] = useState("player");
-  const [paymentQrDataUrl, setPaymentQrDataUrl] = useState("");
   const [availability, setAvailability] = useState({
     username: "idle",
     phone: "idle",
@@ -120,24 +120,23 @@ export function SignupForm() {
     setStep((current) => current + 1);
   }
 
-  function uploadPaymentQr(event) {
-    const file = event.target.files?.[0];
-    if (!file) return setPaymentQrDataUrl("");
-    const reader = new FileReader();
-    reader.onload = () => setPaymentQrDataUrl(String(reader.result || ""));
-    reader.readAsDataURL(file);
-  }
-
   async function submit() {
     setError("");
     if (
       role === "manager" &&
-      (!form.upiId || !form.upiPayeeName || !paymentQrDataUrl)
+      (!form.upiId || !form.upiPayeeName)
     ) {
-      setError("Add your UPI ID, payee name, and payment QR code");
+      setError("Add your UPI ID and payee name");
       return;
     }
     setLoading(true);
+    const paymentQrDataUrl =
+      role === "manager"
+        ? await createPaymentQr({
+            upiId: form.upiId,
+            payeeName: form.upiPayeeName,
+          })
+        : "";
     const response = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -229,16 +228,9 @@ export function SignupForm() {
             Payee name
             <Input value={form.upiPayeeName} onChange={(e) => update("upiPayeeName", e.target.value)} placeholder="Name shown during payment" />
           </label>
-          <label className="grid gap-2 text-sm font-semibold">
-            Payment QR code
-            <Input type="file" accept="image/*" onChange={uploadPaymentQr} />
-          </label>
-          {paymentQrDataUrl && (
-            <div className="flex items-center gap-3 text-sm font-semibold text-muted-foreground">
-              <img className="size-16 rounded-2xl bg-white object-contain p-1 ring-1 ring-border" src={paymentQrDataUrl} alt="Payment QR preview" />
-              <span className="flex items-center gap-2"><QrCode className="size-4" /> QR ready</span>
-            </div>
-          )}
+          <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <QrCode className="size-4" /> Your payment QR will be generated automatically.
+          </p>
         </div>
       )}
 

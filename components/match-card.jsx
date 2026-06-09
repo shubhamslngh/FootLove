@@ -67,6 +67,7 @@ export function MatchCard({
   match,
   canBook = false,
   existingBooking = null,
+  isAuthenticated = true,
   pendingCount = 0,
   showPending = false,
   href,
@@ -300,6 +301,7 @@ export function MatchCard({
           <BookingActions
             match={{ ...match, pendingCount }}
             existingBooking={existingBooking}
+            isAuthenticated={isAuthenticated}
           />
         )}
       </CardContent>

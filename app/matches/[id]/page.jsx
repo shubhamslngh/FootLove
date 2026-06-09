@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { Swords } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -11,20 +11,19 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/server/auth";
 import { readDb, withVenue, publicUser } from "@/lib/server/db";
-import { canManagePlatform } from "@/lib/server/roles";
+import { canBookMatch, canManagePlatform } from "@/lib/server/roles";
 
 export default async function MatchDetailPage({ params }) {
   const user = await getCurrentUser();
-  if (!user) redirect("/login");
 
   const { id } = await params;
   const db = await readDb();
   const match = db.matches.find((match) => match.id === id);
-  if (!match) redirect("/matches");
+  if (!match) notFound();
 
   const matchWithVenue = withVenue(match, db.venues);
   const host = db.users.find((candidate) => candidate.id === match.hostUserId);
-  const bookings = db.bookings
+  const allBookings = db.bookings
     .filter((booking) => booking.matchId === match.id)
     .map((booking) => ({
       ...booking,
@@ -36,14 +35,22 @@ export default async function MatchDetailPage({ params }) {
       const order = { confirmed: 0, pending: 1, rejected: 2 };
       return (order[a.status] ?? 3) - (order[b.status] ?? 3);
     });
+  const bookings = user
+    ? allBookings
+    : allBookings.filter((booking) => booking.status === "confirmed");
 
-  const pendingCount = bookings.filter(
+  const pendingCount = allBookings.filter(
     (booking) => booking.status === "pending",
   ).length;
   const remaining = Math.max(0, match.capacity - match.booked - pendingCount);
   const canScore =
-    match.hostUserId === user.id || canManagePlatform(user.role);
+    Boolean(user) &&
+    (match.hostUserId === user.id || canManagePlatform(user.role));
   const canManage = canScore;
+  const canBook = !user || canBookMatch(user.role);
+  const existingBooking = user
+    ? allBookings.find((booking) => booking.userId === user.id) || null
+    : null;
 
   return (
     <AppShell user={user}>
@@ -84,6 +91,9 @@ export default async function MatchDetailPage({ params }) {
           <div className="grid content-start gap-3">
             <MatchCard
               match={matchWithVenue}
+              canBook={canBook}
+              existingBooking={existingBooking}
+              isAuthenticated={Boolean(user)}
               pendingCount={pendingCount}
               showPending={canManage}
               showDetails
@@ -108,7 +118,12 @@ export default async function MatchDetailPage({ params }) {
                 )}
               </CardContent>
             </Card>
-            {canManage && <MatchManagementActions match={match} />}
+            {canManage && (
+              <MatchManagementActions
+                match={match}
+                hostBooking={existingBooking}
+              />
+            )}
           </div>
 
           <Card className="overflow-hidden bg-card/95 ring-1 ring-border">

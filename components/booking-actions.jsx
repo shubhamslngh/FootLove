@@ -19,7 +19,11 @@ import {
   DEFAULT_UPI_PAYEE,
 } from "@/lib/payment";
 
-export function BookingActions({ match, existingBooking }) {
+export function BookingActions({
+  match,
+  existingBooking,
+  isAuthenticated = true,
+}) {
   const router = useRouter();
   const [step, setStep] = useState("start");
   const [slotRole, setSlotRole] = useState(match.slotRoles?.[0] || "Any role");
@@ -87,7 +91,13 @@ export function BookingActions({ match, existingBooking }) {
       <Button
         type="button"
         className="w-full"
-        onClick={() => setStep("slot")}>
+        onClick={() => {
+          if (!isAuthenticated) {
+            router.push(`/login?next=${encodeURIComponent(`/matches/${match.id}`)}`);
+            return;
+          }
+          setStep("slot");
+        }}>
         <Ticket />
         Book slot
       </Button>

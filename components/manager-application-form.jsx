@@ -6,25 +6,13 @@ import { ChevronDown, CreditCard, QrCode, Send } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { createPaymentQr } from "@/lib/payment";
 
 export function ManagerApplicationForm({ status }) {
   const router = useRouter();
   const [expanded, setExpanded] = useState(status === "rejected");
-  const [paymentQrDataUrl, setPaymentQrDataUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-
-  function uploadQr(event) {
-    const file = event.target.files?.[0];
-    if (!file) {
-      setPaymentQrDataUrl("");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => setPaymentQrDataUrl(String(reader.result || ""));
-    reader.readAsDataURL(file);
-  }
 
   async function submitApplication(event) {
     event.preventDefault();
@@ -32,12 +20,15 @@ export function ManagerApplicationForm({ status }) {
     setMessage("");
 
     const formData = new FormData(event.currentTarget);
+    const upiId = String(formData.get("upiId") || "");
+    const payeeName = String(formData.get("payeeName") || "");
+    const paymentQrDataUrl = await createPaymentQr({ upiId, payeeName });
     const response = await fetch("/api/manager-applications", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        upiId: formData.get("upiId"),
-        payeeName: formData.get("payeeName"),
+        upiId,
+        payeeName,
         paymentQrDataUrl,
       }),
     });
@@ -96,22 +87,9 @@ export function ManagerApplicationForm({ status }) {
         Payee name
         <Input name="payeeName" placeholder="Name shown during payment" required />
       </label>
-      <label className="grid gap-2 text-sm font-semibold">
-        Payment QR code
-        <Input type="file" accept="image/*" onChange={uploadQr} required />
-      </label>
-      {paymentQrDataUrl && (
-        <div className="flex items-center gap-3 text-sm font-semibold text-muted-foreground">
-          <img
-            className="size-16 rounded-xl bg-white object-contain p-1 ring-1 ring-border"
-            src={paymentQrDataUrl}
-            alt="Payment QR preview"
-          />
-          <span className="flex items-center gap-2">
-            <QrCode className="size-4" /> QR ready
-          </span>
-        </div>
-      )}
+      <p className="flex items-center gap-2 text-sm text-muted-foreground">
+        <QrCode className="size-4" /> Your payment QR will be generated automatically.
+      </p>
       <Button disabled={loading}>
         <Send /> {loading ? "Submitting..." : "Submit for approval"}
       </Button>

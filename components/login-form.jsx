@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LockKeyhole, Phone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [phone, setPhone] = useState("");
   const [pin, setPin] = useState("");
   const [error, setError] = useState("");
@@ -40,7 +41,8 @@ export function LoginForm() {
       return;
     }
 
-    router.push("/dashboard");
+    const nextPath = searchParams.get("next");
+    router.push(nextPath?.startsWith("/") ? nextPath : "/dashboard");
     router.refresh();
   }
 

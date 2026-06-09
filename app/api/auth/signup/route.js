@@ -35,7 +35,7 @@ export async function POST(request) {
     requestedRole === ROLES.MANAGER &&
     (!upiId || !upiPayeeName || !paymentQrDataUrl)
   ) {
-    return fail("Managers must provide a UPI ID, payee name, and payment QR code");
+    return fail("Managers must provide a UPI ID and payee name");
   }
   if (
     requestedRole === ROLES.MANAGER &&
@@ -47,7 +47,7 @@ export async function POST(request) {
     requestedRole === ROLES.MANAGER &&
     !paymentQrDataUrl.startsWith("data:image/")
   ) {
-    return fail("Upload a valid payment QR image");
+    return fail("Could not generate a valid payment QR");
   }
 
   let createdUser = null;
