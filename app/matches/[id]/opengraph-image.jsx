@@ -82,7 +82,8 @@ export default async function Image({ params }) {
   return new ImageResponse(
     <div
       style={{
-        background: "#210028",
+        background:
+          "linear-gradient(120deg, #000 0%, #26002f 48%, #100018 100%)",
         color: "white",
         display: "flex",
         flexDirection: "column",
@@ -95,7 +96,7 @@ export default async function Image({ params }) {
       <div
         style={{
           background:
-            "linear-gradient(120deg, #3d0754 0%, #26002f 48%, #100018 100%)",
+            "linear-gradient(120deg, #000 0%, #26002f 48%, #100018 100%)",
           display: "flex",
           inset: 0,
           position: "absolute",
@@ -121,14 +122,13 @@ export default async function Image({ params }) {
           <img
             src={logoUrl}
             alt=""
-            width="132"
-            height="70"
+            width="160"
+            height="100"
             style={{
-              background: "white",
               borderRadius: 9,
-              height: 70,
-              objectFit: "contain",
-              width: 132,
+              height: 100,
+              objectFit: "cover ",
+              width: 160,
             }}
           />
         </div>
@@ -267,7 +267,7 @@ export default async function Image({ params }) {
       <div
         style={{
           alignItems: "center",
-          background: "white",
+          backgroundImage: "linear-gradient(135deg, #FFE000 0%, #799F0C 100%)",
           color: "#210028",
           display: "flex",
           justifyContent: "space-between",
@@ -283,7 +283,7 @@ export default async function Image({ params }) {
         </div>
         <div
           style={{
-            background: remaining > 0 ? "#00ff85" : "#ff2882",
+            background: remaining > 0 ? "#fff" : "#ff2882",
             display: "flex",
             fontSize: 19,
             fontWeight: 900,
