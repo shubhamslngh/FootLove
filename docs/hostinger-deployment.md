@@ -9,8 +9,9 @@
 
 ## Environment Variables
 
-Copy the values from `.env.example` into Hostinger's environment-variable
-panel. Use the database credentials shown in Hostinger's database dashboard.
+Copy the values from the local `.env.hostinger` file into Hostinger's
+environment-variable panel. This file is ignored by Git because it contains
+production secrets.
 
 Required production values:
 
@@ -78,7 +79,7 @@ https://YOUR_DOMAIN/api/health
 ```
 
 A successful response reports `healthy` and `mysql`. Then log in using the
-admin phone and password configured in the environment variables.
+admin phone and six-digit PIN configured in the environment variables.
 
 ## File Uploads
 

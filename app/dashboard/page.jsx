@@ -145,13 +145,12 @@ export default async function DashboardPage() {
   const playerHomePanel = (
     <div className="space-y-6">
       <div>
-        <p className="text-sm font-semibold text-primary">FootLove</p>
         <h1 className="mt-1 text-3xl font-bold tracking-normal">
           Find your next game
         </h1>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mx-auto grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3">
         {playerCategories.map((category) => {
           const Icon = category.icon;
 
@@ -159,21 +158,20 @@ export default async function DashboardPage() {
             <Link
               key={category.title}
               href={category.href}
-              className="theme-reactive-card relative min-h-40 overflow-hidden rounded-2xl bg-card p-4 shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border transition active:scale-[0.98]">
+              className="theme-reactive-card group relative min-h-44 overflow-hidden rounded-2xl bg-card p-4 shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border perspective-[700px] transition active:scale-[0.98] sm:min-h-48 sm:p-5">
+              <div className="pointer-events-none absolute -right-5 -top-5 size-36 rounded-full bg-gradient-to-br from-white/80 via-background/60 to-background/30 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.55),inset_-6px_-8px_14px_rgba(15,23,42,0.08),0_14px_25px_rgba(15,23,42,0.18)] ring-1 ring-white/40 backdrop-blur-xl transition-transform duration-300 [transform:rotateX(8deg)_rotateY(-10deg)_translateZ(8px)] group-hover:[transform:rotateX(3deg)_rotateY(-5deg)_translateZ(14px)_scale(1.03)] dark:from-white/15 dark:via-background/45 dark:to-background/20 dark:ring-white/15 sm:size-40" />
               <LottieAnimation
                 src={category.animation}
-                className="pointer-events-none  absolute -right-1 -top-2 size-24 opacity-80"
+                className="pointer-events-none absolute -right-3 -top-5 z-10 size-32 opacity-90 drop-shadow-[0_12px_10px_rgba(15,23,42,0.22)] transition-transform duration-300 transform-[translateZ(24px)] group-hover:scale-110 sm:size-36"
               />
-              {/* <div
-                className={`relative z-10 flex size-10 items-center justify-center rounded-xl ${category.tone}`}>
-                <Icon className="size-5" />
-              </div> */}
-              <h2 className="relative z-10 mt-7 text-lg font-bold">
-                {category.title}
-              </h2>
-              <p className="relative z-10 mt-1 max-w-32 text-sm leading-5 text-muted-foreground">
-                {category.description}
-              </p>
+              <div className="relative z-20 mt-24 transition-transform duration-300 group-hover:-translate-y-1 sm:mt-28">
+                <h2 className="text-base font-extrabold tracking-tight text-foreground drop-shadow-[0_2px_1px_rgba(255,255,255,0.65)] sm:text-lg dark:drop-shadow-[0_2px_2px_rgba(0,0,0,0.65)]">
+                  {category.title}
+                </h2>
+                <p className="mt-1 max-w-44 text-xs font-medium leading-5 text-foreground/75 drop-shadow-[0_1px_1px_rgba(255,255,255,0.7)] sm:text-sm dark:drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]">
+                  {category.description}
+                </p>
+              </div>
             </Link>
           );
         })}
