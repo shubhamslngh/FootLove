@@ -28,6 +28,7 @@ export function BookingActions({
   const [step, setStep] = useState("start");
   const [slotRole, setSlotRole] = useState(match.slotRoles?.[0] || "Any role");
   const [paymentReference, setPaymentReference] = useState("");
+  const [guestName, setGuestName] = useState("");
   const [showQr, setShowQr] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,7 +53,7 @@ export function BookingActions({
     const response = await fetch(`/api/matches/${match.id}/book`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slotRole, paymentReference }),
+      body: JSON.stringify({ slotRole, paymentReference, guestName }),
     });
 
     const result = await response.json();
@@ -64,7 +65,11 @@ export function BookingActions({
     }
 
     setMessage("Payment marked. Booking is pending manager confirmation.");
-    router.push("/matches");
+    if (isAuthenticated) {
+      router.push("/matches");
+    } else {
+      setStep("complete");
+    }
   }
 
   if (existingBooking) {
@@ -92,15 +97,19 @@ export function BookingActions({
         type="button"
         className="w-full"
         onClick={() => {
-          if (!isAuthenticated) {
-            router.push(`/login?next=${encodeURIComponent(`/matches/${match.id}`)}`);
-            return;
-          }
           setStep("slot");
         }}>
         <Ticket />
         Book slot
       </Button>
+    );
+  }
+
+  if (step === "complete") {
+    return (
+      <div className="rounded-2xl bg-secondary p-3 text-sm font-semibold">
+        Booking submitted. The host will verify your payment.
+      </div>
     );
   }
 
@@ -129,6 +138,14 @@ export function BookingActions({
 
       {step === "slot" ? (
         <>
+          {!isAuthenticated && (
+            <Input
+              value={guestName}
+              onChange={(event) => setGuestName(event.target.value)}
+              placeholder="Your name"
+              autoComplete="name"
+            />
+          )}
           <Select value={slotRole} onValueChange={setSlotRole}>
             <SelectTrigger>
               <SelectValue placeholder="Select slot" />
@@ -146,6 +163,7 @@ export function BookingActions({
           <Button
             type="button"
             size="sm"
+            disabled={!isAuthenticated && guestName.trim().length < 2}
             onClick={() => setStep("payment")}>
             Continue to payment
           </Button>

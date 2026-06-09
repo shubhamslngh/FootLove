@@ -21,7 +21,9 @@ export function PlayerRosterItem({ booking, confirmedByName }) {
             <UserRound className="size-4 text-primary" />
           </div>
           <p className="truncate text-sm font-bold">
-            @{player?.username || player?.name || "unknown"}
+            {player?.username
+              ? `@${player.username}`
+              : player?.name || booking.guestName || "Unknown"}
           </p>
         </div>
         <ChevronDown
@@ -43,11 +45,13 @@ export function PlayerRosterItem({ booking, confirmedByName }) {
               <Badge variant="secondary">{booking.status}</Badge>
             </ProfileRow>
             <ProfileRow label="Account">
-              <span className="font-semibold">{player?.role || "player"}</span>
+              <span className="font-semibold">
+                {player?.role || (booking.guestName ? "guest" : "player")}
+              </span>
             </ProfileRow>
             <ProfileRow label="Full name">
               <span className="font-semibold">
-                {player?.name || "Not available"}
+                {player?.name || booking.guestName || "Not available"}
               </span>
             </ProfileRow>
             <ProfileRow label="Slot">

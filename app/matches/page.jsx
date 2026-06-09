@@ -34,7 +34,9 @@ export default async function MatchesPage() {
     .map((booking) => ({
       ...booking,
       match: matches.find((match) => match.id === booking.matchId),
-      player: db.users.find((candidate) => candidate.id === booking.userId),
+      player: booking.userId
+        ? db.users.find((candidate) => candidate.id === booking.userId)
+        : { name: booking.guestName, role: "guest" },
     }))
     .filter((booking) => booking.match && booking.player);
 

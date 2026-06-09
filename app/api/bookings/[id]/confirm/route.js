@@ -33,18 +33,20 @@ export async function POST(_request, { params }) {
     booking.confirmedByUserId = user.id;
     booking.confirmedAt = new Date().toISOString();
     match.booked += 1;
-    db.notifications ??= [];
-    db.notifications.push({
-      id: `not_${randomUUID()}`,
-      userId: booking.userId,
-      type: "booking_confirmed",
-      title: "Booking confirmed",
-      message: `Your slot for ${match.title} has been confirmed.`,
-      matchId: match.id,
-      bookingId: booking.id,
-      read: false,
-      createdAt: new Date().toISOString(),
-    });
+    if (booking.userId) {
+      db.notifications ??= [];
+      db.notifications.push({
+        id: `not_${randomUUID()}`,
+        userId: booking.userId,
+        type: "booking_confirmed",
+        title: "Booking confirmed",
+        message: `Your slot for ${match.title} has been confirmed.`,
+        matchId: match.id,
+        bookingId: booking.id,
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+    }
     result = { booking };
     return db;
   });

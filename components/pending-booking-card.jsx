@@ -26,7 +26,7 @@ export function PendingBookingCard({ booking }) {
           {formatDisplayDate(booking.match.date)}, {booking.match.time}
         </Detail>
         <Detail icon={Phone} label="Player">
-          {booking.player.phone}
+          {booking.player.phone || "Guest booking"}
         </Detail>
         <Detail icon={UserRound} label="Slot">
           {booking.slotRole}

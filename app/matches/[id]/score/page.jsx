@@ -32,7 +32,7 @@ export default async function MatchScorePage({ params }) {
       return {
         bookingId: booking.id,
         team: booking.team,
-        name: player?.name || "Unknown player",
+        name: player?.name || booking.guestName || "Unknown player",
         username: player?.username,
       };
     });

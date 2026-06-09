@@ -74,7 +74,9 @@ export default async function DashboardPage() {
   ).map((booking) => ({
     ...booking,
     match: db.matches.find((match) => match.id === booking.matchId),
-    player: db.users.find((candidate) => candidate.id === booking.userId),
+    player: booking.userId
+      ? db.users.find((candidate) => candidate.id === booking.userId)
+      : { name: booking.guestName, role: "guest" },
   })).filter((booking) => booking.match && booking.player);
   const pendingVenues = db.venues
     .filter((venue) => venue.status === "pending")

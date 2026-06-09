@@ -1,6 +1,12 @@
 import "./globals.css";
 
 export const metadata = {
+  metadataBase: new URL(
+    process.env.APP_URL ||
+      (process.env.NODE_ENV === "production"
+        ? "https://footlove.app"
+        : "http://localhost:3000"),
+  ),
   title: "FootLove",
   description: "Find nearby football matches and book your slot.",
 };

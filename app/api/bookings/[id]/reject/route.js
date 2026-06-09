@@ -26,18 +26,20 @@ export async function POST(_request, { params }) {
     const match = db.matches.find(
       (candidate) => candidate.id === booking.matchId,
     );
-    db.notifications ??= [];
-    db.notifications.push({
-      id: `not_${randomUUID()}`,
-      userId: booking.userId,
-      type: "booking_rejected",
-      title: "Booking not confirmed",
-      message: `Your request for ${match?.title || "the match"} was declined.`,
-      matchId: booking.matchId,
-      bookingId: booking.id,
-      read: false,
-      createdAt: new Date().toISOString(),
-    });
+    if (booking.userId) {
+      db.notifications ??= [];
+      db.notifications.push({
+        id: `not_${randomUUID()}`,
+        userId: booking.userId,
+        type: "booking_rejected",
+        title: "Booking not confirmed",
+        message: `Your request for ${match?.title || "the match"} was declined.`,
+        matchId: booking.matchId,
+        bookingId: booking.id,
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
+    }
     result = { booking };
     return db;
   });

@@ -12,6 +12,61 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/server/auth";
 import { readDb, withVenue, publicUser } from "@/lib/server/db";
 import { canBookMatch, canManagePlatform } from "@/lib/server/roles";
+import { formatDisplayDate } from "@/lib/utils";
+
+export async function generateMetadata({ params }) {
+  const { id } = await params;
+  const db = await readDb();
+  const match = db.matches.find((candidate) => candidate.id === id);
+
+  if (!match) {
+    return {
+      title: "Match not found | FootLove",
+    };
+  }
+
+  const venue = db.venues.find((candidate) => candidate.id === match.venueId);
+  const pendingCount = db.bookings.filter(
+    (booking) =>
+      booking.matchId === match.id && booking.status === "pending",
+  ).length;
+  const remaining = Math.max(
+    0,
+    match.capacity - match.booked - pendingCount,
+  );
+  const teams = `${match.homeTeam} vs ${match.awayTeam}`;
+  const description = `${formatDisplayDate(match.date)} at ${match.time} · ${venue?.name || "Venue"} · ₹${match.price} · ${remaining} slots left`;
+  const imageUrl = `/matches/${match.id}/opengraph-image`;
+
+  return {
+    title: `${teams} | FootLove`,
+    description,
+    alternates: {
+      canonical: `/matches/${match.id}`,
+    },
+    openGraph: {
+      title: teams,
+      description,
+      type: "website",
+      url: `/matches/${match.id}`,
+      siteName: "FootLove",
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${teams} match card`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: teams,
+      description,
+      images: [imageUrl],
+    },
+  };
+}
 
 export default async function MatchDetailPage({ params }) {
   const user = await getCurrentUser();
@@ -27,9 +82,11 @@ export default async function MatchDetailPage({ params }) {
     .filter((booking) => booking.matchId === match.id)
     .map((booking) => ({
       ...booking,
-      player: publicUser(
-        db.users.find((candidate) => candidate.id === booking.userId),
-      ),
+      player: booking.userId
+        ? publicUser(
+            db.users.find((candidate) => candidate.id === booking.userId),
+          )
+        : { name: booking.guestName, role: "guest" },
     }))
     .sort((a, b) => {
       const order = { confirmed: 0, pending: 1, rejected: 2 };
