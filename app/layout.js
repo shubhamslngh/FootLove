@@ -4,7 +4,7 @@ function getMetadataBase() {
   const configuredUrl = process.env.APP_URL?.trim();
   const fallbackUrl =
     process.env.NODE_ENV === "production"
-      ? "https://footlove.app"
+      ? "https://soccersesh.app"
       : "http://localhost:3000";
   const url = configuredUrl || fallbackUrl;
 
@@ -13,7 +13,7 @@ function getMetadataBase() {
 
 export const metadata = {
   metadataBase: getMetadataBase(),
-  title: "FootLove",
+  title: "SoccerSesh",
   description: "Find nearby football matches and book your slot.",
 };
 

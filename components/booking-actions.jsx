@@ -92,13 +92,39 @@ export function BookingActions({
   }
 
   if (step === "start") {
+    if (!isAuthenticated) {
+      return (
+        <div className="grid gap-2 rounded-2xl bg-secondary p-3">
+          <p className="text-sm font-bold">How would you like to book?</p>
+          <p className="text-xs text-muted-foreground">
+            Continue without an account or log in to track your booking.
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStep("slot")}>
+              Continue as guest
+            </Button>
+            <Button
+              type="button"
+              onClick={() =>
+                router.push(
+                  `/login?next=${encodeURIComponent(`/matches/${match.id}`)}`,
+                )
+              }>
+              Login
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <Button
         type="button"
         className="w-full"
-        onClick={() => {
-          setStep("slot");
-        }}>
+        onClick={() => setStep("slot")}>
         <Ticket />
         Book slot
       </Button>

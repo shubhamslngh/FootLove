@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { UserPlus } from "lucide-react";
+import Image from "next/image";
 
 import { SignupForm } from "@/components/signup-form";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -12,25 +12,39 @@ export default function SignupPage() {
         <div className="space-y-6">
           <div className="space-y-3 pt-6">
             <div className="flex items-center justify-between gap-3">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-card text-primary shadow-[0_10px_28px_rgba(17,24,39,0.08)] ring-1 ring-border">
-                <UserPlus className="size-6" />
-              </div>
+                          <div className="flex h-auto items-center justify-center overflow-hidden rounded-2xl">
+                            <Image
+                              src="/Logo.png"
+                              alt="SoccerSesh logo"
+                              width={144}
+                              height={80}
+                              className="object-contain"
+                              priority
+                            />
+                          </div>
               <ThemeToggle />
             </div>
             <div>
-              <p className="text-sm font-semibold text-primary">FootLove</p>
-              <h1 className="mt-2 text-4xl font-bold leading-tight tracking-normal">Join pickup matches faster</h1>
+              {/* <p className="text-sm font-semibold text-primary">SoccerSesh</p> */}
+              <h1 className="mt-2 font-extralight text-4xl text-center font-bold leading-tight tracking-normal">
+                Join pickup matches faster
+              </h1>
             </div>
           </div>
           <Card>
             <CardHeader>
               <CardTitle>Create account</CardTitle>
-              <CardDescription>We will guide you through a few quick steps.</CardDescription>
+              <CardDescription>
+                We will guide you through a few quick steps.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <SignupForm />
               <p className="text-center text-sm text-muted-foreground">
-                Already have an account? <Link href="/login" className="font-semibold text-primary">Login</Link>
+                Already have an account?{" "}
+                <Link href="/login" className="font-semibold text-primary">
+                  Login
+                </Link>
               </p>
             </CardContent>
           </Card>

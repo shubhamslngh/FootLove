@@ -1,4 +1,4 @@
-# FootLove System Design
+# SoccerSesh System Design
 
 ## Stack
 

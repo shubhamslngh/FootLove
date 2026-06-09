@@ -473,7 +473,7 @@ export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
                     <QrCode className="size-20 shrink-0 rounded-xl bg-white p-4 text-foreground" />
                   </div>
                   <div className="mt-4 flex items-center justify-between border-t border-background/15 pt-3 text-xs">
-                    <span className="text-background/65">FootLove Host</span>
+                    <span className="text-background/65">SoccerSesh Host</span>
                     <span className="font-bold text-primary">
                       Admin verified
                     </span>

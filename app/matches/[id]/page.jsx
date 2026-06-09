@@ -21,7 +21,7 @@ export async function generateMetadata({ params }) {
 
   if (!match) {
     return {
-      title: "Match not found | FootLove",
+      title: "Match not found | SoccerSesh",
     };
   }
 
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }) {
   const imageUrl = `/matches/${match.id}/opengraph-image`;
 
   return {
-    title: `${teams} | FootLove`,
+    title: `${teams} | SoccerSesh`,
     description,
     alternates: {
       canonical: `/matches/${match.id}`,
@@ -49,7 +49,7 @@ export async function generateMetadata({ params }) {
       description,
       type: "website",
       url: `/matches/${match.id}`,
-      siteName: "FootLove",
+      siteName: "SoccerSesh",
       images: [
         {
           url: imageUrl,
