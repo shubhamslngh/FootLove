@@ -1,12 +1,18 @@
 import "./globals.css";
 
+function getMetadataBase() {
+  const configuredUrl = process.env.APP_URL?.trim();
+  const fallbackUrl =
+    process.env.NODE_ENV === "production"
+      ? "https://footlove.app"
+      : "http://localhost:3000";
+  const url = configuredUrl || fallbackUrl;
+
+  return new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
+}
+
 export const metadata = {
-  metadataBase: new URL(
-    process.env.APP_URL ||
-      (process.env.NODE_ENV === "production"
-        ? "https://footlove.app"
-        : "http://localhost:3000"),
-  ),
+  metadataBase: getMetadataBase(),
   title: "FootLove",
   description: "Find nearby football matches and book your slot.",
 };
