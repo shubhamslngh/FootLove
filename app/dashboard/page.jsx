@@ -63,7 +63,7 @@ const playerCategories = [
     description: "Track goals, assists, wins, and player rankings",
     icon: Medal,
     tone: "bg-rose-500/12 text-rose-600 dark:text-rose-300",
-    animation: "/Football4.lottie",
+    animation: "/Football5.lottie",
     href: "/leaderboard",
   },
   {
