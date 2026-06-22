@@ -33,7 +33,9 @@ export default async function MatchScorePage({ params }) {
         bookingId: booking.id,
         team: booking.team,
         name: player?.name || booking.guestName || "Unknown player",
-        username: player?.username,
+        username: player?.username || booking.guestUsername,
+        phone: player?.phone || booking.guestPhone,
+        isOffline: !booking.userId,
       };
     });
 

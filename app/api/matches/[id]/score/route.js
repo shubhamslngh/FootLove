@@ -6,6 +6,27 @@ function canControlMatch(user, match) {
   return canManagePlatform(user.role) || match.hostUserId === user.id;
 }
 
+const PLAYER_EVENTS = {
+  foul: "Foul",
+  injury: "Injured",
+  yellow_card: "Yellow card",
+  red_card: "Red card",
+};
+
+function getBookingDisplayName(db, booking) {
+  if (!booking) return null;
+  const player = booking.userId
+    ? db.users.find((candidate) => candidate.id === booking.userId)
+    : null;
+  return (
+    player?.username ||
+    player?.name ||
+    booking.guestUsername ||
+    booking.guestName ||
+    null
+  );
+}
+
 export async function POST(request, { params }) {
   const { id } = await params;
   const { user, error } = await requireUser();
@@ -18,6 +39,8 @@ export async function POST(request, { params }) {
   const scorerBookingId = String(body?.scorerBookingId || "");
   const assistBookingId = String(body?.assistBookingId || "");
   const goalType = String(body?.goalType || "normal");
+  const playerEventType = String(body?.playerEventType || "");
+  const playerBookingId = String(body?.playerBookingId || "");
   let result;
 
   await updateDb((db) => {
@@ -55,6 +78,49 @@ export async function POST(request, { params }) {
         label: "Full time",
         elapsedSeconds: match.elapsedSeconds,
         createdAt: match.completedAt,
+      });
+      result = { match };
+      return db;
+    }
+
+    if (playerEventType) {
+      if (!PLAYER_EVENTS[playerEventType] || !["home", "away"].includes(team)) {
+        result = { error: "Invalid player event", status: 400 };
+        return db;
+      }
+      const eventBooking = db.bookings.find(
+        (booking) =>
+          booking.id === playerBookingId &&
+          booking.matchId === id &&
+          booking.status === "confirmed",
+      );
+      if (!eventBooking) {
+        result = { error: "Select a confirmed player", status: 400 };
+        return db;
+      }
+      if (eventBooking.team && eventBooking.team !== team) {
+        result = { error: "Selected player is not on this team", status: 400 };
+        return db;
+      }
+      const playerName = getBookingDisplayName(db, eventBooking);
+      const elapsedSeconds =
+        Number(match.elapsedSeconds || 0) +
+        (match.timerRunning && match.timerStartedAt
+          ? Math.floor(
+              (Date.now() - new Date(match.timerStartedAt).getTime()) / 1000,
+            )
+          : 0);
+      match.events ??= [];
+      match.events.push({
+        id: `evt_${Date.now()}`,
+        type: playerEventType,
+        team,
+        scorerBookingId: eventBooking.id,
+        scorerUserId: eventBooking.userId || null,
+        scorerName: playerName,
+        label: `${PLAYER_EVENTS[playerEventType]}: @${playerName || "player"}`,
+        elapsedSeconds,
+        createdAt: new Date().toISOString(),
       });
       result = { match };
       return db;
@@ -115,12 +181,8 @@ export async function POST(request, { params }) {
           )
         : 0);
     match.events ??= [];
-    const scorer = scorerBooking
-      ? db.users.find((candidate) => candidate.id === scorerBooking.userId)
-      : null;
-    const assist = assistBooking
-      ? db.users.find((candidate) => candidate.id === assistBooking.userId)
-      : null;
+    const scorerName = getBookingDisplayName(db, scorerBooking);
+    const assistName = getBookingDisplayName(db, assistBooking);
     match.events.push({
       id: `evt_${Date.now()}`,
       type: change > 0 ? "goal" : "score_correction",
@@ -128,14 +190,14 @@ export async function POST(request, { params }) {
       change,
       goalType,
       scorerBookingId: scorerBooking?.id || null,
-      scorerUserId: scorer?.id || null,
-      scorerName: scorer?.username || scorer?.name || null,
+      scorerUserId: scorerBooking?.userId || null,
+      scorerName,
       assistBookingId: assistBooking?.id || null,
-      assistUserId: assist?.id || null,
-      assistName: assist?.username || assist?.name || null,
+      assistUserId: assistBooking?.userId || null,
+      assistName,
       label:
         change > 0
-          ? `${goalType === "own_goal" ? "Own goal" : "Goal"} by @${scorer?.username || scorer?.name || "player"}${assist ? `, assisted by @${assist.username || assist.name}` : ""}`
+          ? `${goalType === "own_goal" ? "Own goal" : "Goal"} by @${scorerName || "player"}${assistName ? `, assisted by @${assistName}` : ""}`
           : `Score corrected for ${team === "home" ? match.homeTeam : match.awayTeam}`,
       elapsedSeconds,
       createdAt: new Date().toISOString(),

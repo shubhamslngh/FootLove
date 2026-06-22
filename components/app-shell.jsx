@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { CalendarPlus, LayoutDashboard, Trophy, UserRound } from "lucide-react";
+import { CalendarPlus, LayoutDashboard, Medal, Trophy, UserRound } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { LogoutButton } from "@/components/logout-button";
@@ -11,6 +11,7 @@ import { canHostMatch, ROLES } from "@/lib/server/roles";
 const navItems = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/matches", label: "Matches", icon: Trophy },
+  { href: "/leaderboard", label: "Ranks", icon: Medal },
   { href: "/host", label: "Host", icon: CalendarPlus },
   { href: "/profile", label: "Profile", icon: UserRound },
 ];
@@ -62,7 +63,7 @@ export function AppShell({ children, user }) {
         <nav className="fixed inset-x-3 bottom-3 z-50 rounded-[28px] bg-card/95 shadow-[0_18px_44px_rgba(17,24,39,0.18)] ring-1 ring-border backdrop-blur-xl lg:hidden">
           <div
             className={`grid ${
-              canHost ? "grid-cols-4" : "grid-cols-3"
+              canHost ? "grid-cols-5" : "grid-cols-4"
             }`}>
             {navItems
               .filter((item) => item.href !== "/host" || canHost)

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   CalendarPlus,
+  Medal,
   MapPinned,
   Shield,
   Sparkles,
+  Trophy,
   UsersRound,
 } from "lucide-react";
 
@@ -55,6 +57,22 @@ const playerCategories = [
     tone: "bg-violet-500/12 text-violet-600 dark:text-violet-300",
     animation: "/Football2.lottie",
     href: "/clubs",
+  },
+  {
+    title: "Leaderboard",
+    description: "Track goals, assists, wins, and player rankings",
+    icon: Medal,
+    tone: "bg-rose-500/12 text-rose-600 dark:text-rose-300",
+    animation: "/Football4.lottie",
+    href: "/leaderboard",
+  },
+  {
+    title: "World Cup 2026",
+    description: "Fixtures, teams, and tournament updates",
+    icon: Trophy,
+    tone: "bg-amber-500/12 text-amber-600 dark:text-amber-300",
+    animation: "/Football4.lottie",
+    href: "/world-cup",
   },
 ];
 
@@ -152,7 +170,7 @@ export default async function DashboardPage() {
         </h1>
       </div>
 
-      <div className="mx-auto grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-3">
+      <div className="mx-auto grid grid-cols-1 gap-4 min-[420px]:grid-cols-2 lg:grid-cols-4">
         {playerCategories.map((category) => {
           const Icon = category.icon;
 

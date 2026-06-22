@@ -86,7 +86,12 @@ export default async function MatchDetailPage({ params }) {
         ? publicUser(
             db.users.find((candidate) => candidate.id === booking.userId),
           )
-        : { name: booking.guestName, role: "guest" },
+        : {
+            name: booking.guestName,
+            username: booking.guestUsername,
+            phone: booking.guestPhone,
+            role: booking.guestUsername ? "offline" : "guest",
+          },
     }))
     .sort((a, b) => {
       const order = { confirmed: 0, pending: 1, rejected: 2 };
