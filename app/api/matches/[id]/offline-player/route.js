@@ -35,7 +35,7 @@ export async function POST(request, { params }) {
   if (error) return error;
 
   const body = await parseJson(request);
-  const name = String(body?.name || "").trim().replace(/\s+/g, " ");
+  let name = String(body?.name || "").trim().replace(/\s+/g, " ");
   const phone = normalizeIndianPhone(body?.phone);
   const team = body?.team === "away" ? "away" : "home";
 
@@ -112,6 +112,14 @@ export async function POST(request, { params }) {
       return db;
     }
 
+    const knownGuest = [...db.bookings]
+      .reverse()
+      .find(
+        (booking) =>
+          normalizeIndianPhone(booking.guestPhone) === phone &&
+          String(booking.guestName || "").trim(),
+      );
+    name = knownGuest?.guestName || name;
     if (name.length < 2) {
       result = { error: "Enter the offline player's name", status: 400 };
       return db;
@@ -186,7 +194,34 @@ export async function GET(request, { params }) {
   const registeredPlayer = db.users.find(
     (candidate) => normalizeIndianPhone(candidate.phone) === phone,
   );
-  if (!registeredPlayer) return ok({ found: false });
+  if (!registeredPlayer) {
+    const guestBooking = [...db.bookings]
+      .reverse()
+      .find(
+        (booking) =>
+          normalizeIndianPhone(booking.guestPhone) === phone &&
+          String(booking.guestName || "").trim(),
+      );
+    if (!guestBooking) return ok({ found: false });
+
+    const existingBooking = db.bookings.find(
+      (booking) =>
+        booking.matchId === match.id &&
+        normalizeIndianPhone(booking.guestPhone) === phone &&
+        ["pending", "confirmed"].includes(booking.status),
+    );
+    return ok({
+      found: true,
+      guest: true,
+      alreadyAdded: Boolean(existingBooking),
+      player: {
+        name: guestBooking.guestName,
+        username: guestBooking.guestUsername || null,
+        phone,
+        role: "guest",
+      },
+    });
+  }
 
   const existingBooking = db.bookings.find(
     (booking) =>

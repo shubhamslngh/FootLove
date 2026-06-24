@@ -31,7 +31,7 @@ export function PlayerCardDisplay({ user, stats, className }) {
       <div
         className="absolute inset-0 dark:hidden"
         style={{
-          background: `radial-gradient(circle at 50% 34%, ${theme.colors[0]}24, transparent 38%), linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.25) 48%, rgba(241,245,249,0.94) 100%)`,
+          background: `radial-gradient(circle at 50% 34%, ${theme.colors[0]}24, transparent 38%), linear-gradient(180deg, transparent 0%, rgba(255,255,255,0.15) 48%, rgba(241,245,249,0.92) 100%)`,
         }}
       />
       <div
@@ -74,11 +74,23 @@ export function PlayerCardDisplay({ user, stats, className }) {
         </div>
 
         <div className="grid grid-cols-6 gap-2 text-center">
-          <CardStat className="col-span-2" label="PTS" value={formatPoints(stats.points)} />
-          <CardStat className="col-span-2" label="Matches" value={stats.played} />
+          <CardStat
+            className="col-span-2"
+            label="PTS"
+            value={formatPoints(stats.points)}
+          />
+          <CardStat
+            className="col-span-2"
+            label="Matches"
+            value={stats.played}
+          />
           <CardStat className="col-span-2" label="Wins" value={stats.wins} />
           <CardStat className="col-span-3" label="Goals" value={stats.goals} />
-          <CardStat className="col-span-3" label="Assists" value={stats.assists} />
+          <CardStat
+            className="col-span-3"
+            label="Assists"
+            value={stats.assists}
+          />
         </div>
       </div>
     </div>
@@ -87,7 +99,11 @@ export function PlayerCardDisplay({ user, stats, className }) {
 
 function CardStat({ label, value, className }) {
   return (
-    <div className={cn("rounded-lg border border-black/10 bg-white/55 px-2 py-2.5 backdrop-blur-sm dark:border-white/10 dark:bg-black/25", className)}>
+    <div
+      className={cn(
+        "rounded-lg border border-black/10 bg-white/55 px-2 py-2.5 backdrop-blur-sm dark:border-white/10 dark:bg-black/25",
+        className,
+      )}>
       <p className="text-xl font-black">{value}</p>
       <p className="text-[0.65rem] font-black uppercase text-slate-600 dark:text-white/70">
         {label}

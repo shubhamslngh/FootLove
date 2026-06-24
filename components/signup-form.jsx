@@ -83,6 +83,12 @@ export function SignupForm() {
           ...current,
           phone: result?.data?.available ? "available" : "taken",
         }));
+        if (result?.data?.available && result?.data?.guestName) {
+          setForm((current) => ({
+            ...current,
+            name: current.name.trim() ? current.name : result.data.guestName,
+          }));
+        }
       } catch {
         setAvailability((current) => ({ ...current, phone: "error" }));
       }
@@ -97,20 +103,20 @@ export function SignupForm() {
   function nextStep() {
     setError("");
     if (step === 1) {
+      if (!/^[6-9]\d{9}$/.test(form.phone)) {
+        return setError("Enter a valid 10-digit Indian mobile number");
+      }
+      if (availability.phone !== "available") {
+        return setError("Use a mobile number that is not already registered");
+      }
+    }
+    if (step === 2) {
       if (!form.name.trim()) return setError("Enter your full name");
       if (!/^[a-z0-9_]{3,20}$/.test(form.username)) {
         return setError("Username must use 3-20 lowercase letters, numbers, or underscores");
       }
       if (availability.username !== "available") {
         return setError("Choose an available username");
-      }
-    }
-    if (step === 2) {
-      if (!/^[6-9]\d{9}$/.test(form.phone)) {
-        return setError("Enter a valid 10-digit Indian mobile number");
-      }
-      if (availability.phone !== "available") {
-        return setError("Use a mobile number that is not already registered");
       }
     }
     if (step === 3) {
@@ -163,34 +169,18 @@ export function SignupForm() {
           {step} of {totalSteps}
         </span>
         <span className="text-muted-foreground">
-          {["Your profile", "Mobile and account", "Create your PIN", "Host payment setup"][step - 1]}
+          {["Your mobile", "Your profile", "Create your PIN", "Host payment setup"][step - 1]}
         </span>
       </div>
 
       {step === 1 && (
-        <div className="space-y-4">
-          <IconInput icon={User} label="Full name">
-            <Input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Alex Player" autoFocus />
-          </IconInput>
-          <IconInput icon={AtSign} label="Choose a username">
-            <Input value={form.username} onChange={(e) => update("username", e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20))} placeholder="alex_player" />
-          </IconInput>
-          <AvailabilityStatus
-            status={availability.username}
-            availableText="Username is available"
-            takenText="Username is already taken"
-          />
-        </div>
-      )}
-
-      {step === 2 && (
         <div className="space-y-4">
           <IconInput icon={Phone} label="Mobile number">
             <Input value={form.phone} onChange={(e) => update("phone", e.target.value.replace(/\D/g, "").slice(0, 10))} type="tel" inputMode="numeric" placeholder="9876543210" autoFocus />
           </IconInput>
           <AvailabilityStatus
             status={availability.phone}
-            availableText="Mobile number is available"
+            availableText={form.name ? `Welcome back, ${form.name}. We found your guest details.` : "Mobile number is available"}
             takenText="An account already uses this mobile number"
           />
           <label className="grid gap-2 text-sm font-semibold">
@@ -203,6 +193,22 @@ export function SignupForm() {
               </SelectContent>
             </Select>
           </label>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="space-y-4">
+          <IconInput icon={User} label="Full name">
+            <Input value={form.name} onChange={(e) => update("name", e.target.value)} placeholder="Alex Player" autoFocus />
+          </IconInput>
+          <IconInput icon={AtSign} label="Choose a username">
+            <Input value={form.username} onChange={(e) => update("username", e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "").slice(0, 20))} placeholder="alex_player" />
+          </IconInput>
+          <AvailabilityStatus
+            status={availability.username}
+            availableText="Username is available"
+            takenText="Username is already taken"
+          />
         </div>
       )}
 

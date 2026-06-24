@@ -30,5 +30,17 @@ export async function GET(request) {
   const available = !db.users.some(
     (user) => normalizeIndianPhone(user.phone) === phone,
   );
-  return ok({ field: "phone", available, valid: true });
+  const guestBooking = [...db.bookings]
+    .reverse()
+    .find(
+      (booking) =>
+        normalizeIndianPhone(booking.guestPhone) === phone &&
+        String(booking.guestName || "").trim(),
+    );
+  return ok({
+    field: "phone",
+    available,
+    valid: true,
+    guestName: available ? guestBooking?.guestName || null : null,
+  });
 }

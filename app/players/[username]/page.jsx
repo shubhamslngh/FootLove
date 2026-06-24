@@ -54,7 +54,7 @@ export default async function PublicPlayerPage({ params }) {
 
   return (
     <main className="min-h-screen bg-[#171517] text-white">
-      <header className="border-b border-white/10 bg-black/20">
+      <header className="border-b border-black/10 bg-black/20">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
           <Link href="/" className="flex items-center">
             <Image
@@ -62,7 +62,7 @@ export default async function PublicPlayerPage({ params }) {
               alt="SoccerSesh"
               width={144}
               height={40}
-              className="h-10 w-auto object-contain"
+              className="h-30 w-auto object-cover"
               priority
             />
           </Link>

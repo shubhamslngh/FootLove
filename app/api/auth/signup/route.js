@@ -89,6 +89,14 @@ export async function POST(request) {
       createdAt: new Date().toISOString(),
     };
     db.users.push(createdUser);
+
+    for (const booking of db.bookings) {
+      if (normalizeIndianPhone(booking.guestPhone) !== phone) continue;
+      booking.userId = createdUser.id;
+      delete booking.guestName;
+      delete booking.guestPhone;
+      delete booking.guestUsername;
+    }
     return db;
   });
 

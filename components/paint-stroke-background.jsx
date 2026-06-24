@@ -2,11 +2,7 @@
 
 import { useEffect, useRef } from "react";
 
-export function PaintStrokeBackground({
-  colors,
-  baseColor,
-  intensity = 1,
-}) {
+export function PaintStrokeBackground({ colors, baseColor, intensity = 1 }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -40,7 +36,8 @@ export function PaintStrokeBackground({
         length: progress * 500,
         maxLength: Math.random() * 420 + 100,
         speed: (Math.random() * 4 + 7) * intensity,
-        width: Math.random() > 0.9 ? Math.random() * 3 + 2.5 : Math.random() + 0.45,
+        width:
+          Math.random() > 0.9 ? Math.random() * 3 + 2.5 : Math.random() + 0.45,
         opacity: Math.random() * 0.34 + 0.08,
         color: colors[Math.floor(Math.random() * colors.length)],
         bend: Math.random() * 12,
@@ -54,8 +51,10 @@ export function PaintStrokeBackground({
       const controlY = stroke.startY + spanY * 0.82 + stroke.bend;
 
       context.beginPath();
-      context.globalCompositeOperation = "overlay";
-      context.globalAlpha = stroke.opacity;
+      context.globalCompositeOperation = darkMode ? "overlay" : "source-over";
+      context.globalAlpha = darkMode
+        ? stroke.opacity
+        : Math.min(stroke.opacity + 0.18, 1);
       context.strokeStyle = stroke.color;
       context.lineWidth = stroke.width;
       context.lineCap = "round";
@@ -66,7 +65,7 @@ export function PaintStrokeBackground({
 
     function paintStaticTexture() {
       context.clearRect(0, 0, width, height);
-      context.fillStyle = darkMode ? baseColor : "#ffffff";
+      context.fillStyle = darkMode ? baseColor : "#f8fafc";
       context.fillRect(0, 0, width, height);
       strokes.forEach(drawStroke);
       context.globalCompositeOperation = "source-over";
@@ -95,7 +94,9 @@ export function PaintStrokeBackground({
 
       context.globalCompositeOperation = "source-over";
       context.globalAlpha = 1;
-      context.fillStyle = darkMode ? `${baseColor}18` : "rgba(255, 255, 255, 0.09)";
+      context.fillStyle = darkMode
+        ? `${baseColor}18`
+        : "rgba(255, 255, 255, 0.09)";
       context.fillRect(0, 0, width, height);
 
       const angle = Math.PI / 4.6;

@@ -776,7 +776,7 @@ function TeamAssignment({
               {addingOfflinePlayer
                 ? "Adding..."
                 : playerLookup.status === "found"
-                  ? "Add registered player"
+                  ? "Add known player"
                   : "Add offline player"}
             </Button>
           </div>
@@ -1761,7 +1761,7 @@ function ManageDrawer({
                   {addingPlayer
                     ? "Adding..."
                     : playerLookup.status === "found"
-                      ? "Add registered player"
+                      ? "Add known player"
                       : "Add offline player"}
                 </Button>
               </div>

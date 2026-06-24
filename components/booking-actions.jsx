@@ -29,6 +29,8 @@ export function BookingActions({
   const [slotRole, setSlotRole] = useState(match.slotRoles?.[0] || "Any role");
   const [paymentReference, setPaymentReference] = useState("");
   const [guestName, setGuestName] = useState("");
+  const [guestPhone, setGuestPhone] = useState("");
+  const [guestLookup, setGuestLookup] = useState("idle");
   const [qrExpanded, setQrExpanded] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -60,6 +62,44 @@ export function BookingActions({
     };
   }, [qrExpanded]);
 
+  useEffect(() => {
+    if (isAuthenticated || guestPhone.length !== 10) {
+      setGuestLookup("idle");
+      return undefined;
+    }
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setGuestLookup("checking");
+      try {
+        const response = await fetch(
+          `/api/auth/availability?phone=${encodeURIComponent(guestPhone)}`,
+          { signal: controller.signal },
+        );
+        const result = await response.json();
+        if (!response.ok || !result?.data?.valid) {
+          setGuestLookup("error");
+          return;
+        }
+        if (!result.data.available) {
+          setGuestLookup("registered");
+          return;
+        }
+        if (result.data.guestName) {
+          setGuestName(result.data.guestName);
+          setGuestLookup("found");
+          return;
+        }
+        setGuestLookup("new");
+      } catch (error) {
+        if (error.name !== "AbortError") setGuestLookup("error");
+      }
+    }, 250);
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeout);
+    };
+  }, [guestPhone, isAuthenticated]);
+
   async function bookSlot() {
     setMessage("");
     setLoading(true);
@@ -67,7 +107,12 @@ export function BookingActions({
     const response = await fetch(`/api/matches/${match.id}/book`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slotRole, paymentReference, guestName }),
+      body: JSON.stringify({
+        slotRole,
+        paymentReference,
+        guestName,
+        guestPhone,
+      }),
     });
 
     const result = await response.json();
@@ -179,12 +224,39 @@ export function BookingActions({
       {step === "slot" ? (
         <>
           {!isAuthenticated && (
-            <Input
-              value={guestName}
-              onChange={(event) => setGuestName(event.target.value)}
-              placeholder="Your name"
-              autoComplete="name"
-            />
+            <>
+              <Input
+                value={guestPhone}
+                onChange={(event) => {
+                  setGuestPhone(
+                    event.target.value.replace(/\D/g, "").slice(0, 10),
+                  );
+                  setGuestName("");
+                }}
+                placeholder="Mobile number"
+                type="tel"
+                inputMode="numeric"
+                autoComplete="tel"
+              />
+              {guestLookup === "found" && (
+                <p className="text-xs font-semibold text-emerald-600">
+                  Welcome back, {guestName}. Your name was fetched.
+                </p>
+              )}
+              {guestLookup === "registered" && (
+                <p className="text-xs font-semibold text-red-600">
+                  This number has an account. Please log in to continue.
+                </p>
+              )}
+              {guestLookup === "new" && (
+                <Input
+                  value={guestName}
+                  onChange={(event) => setGuestName(event.target.value)}
+                  placeholder="Your name"
+                  autoComplete="name"
+                />
+              )}
+            </>
           )}
           <Select value={slotRole} onValueChange={setSlotRole}>
             <SelectTrigger>
@@ -203,7 +275,13 @@ export function BookingActions({
           <Button
             type="button"
             size="sm"
-            disabled={!isAuthenticated && guestName.trim().length < 2}
+            disabled={
+              !isAuthenticated &&
+              (guestPhone.length !== 10 ||
+                guestLookup === "checking" ||
+                guestLookup === "registered" ||
+                guestName.trim().length < 2)
+            }
             onClick={() => setStep("payment")}>
             Continue to payment
           </Button>
@@ -289,7 +367,7 @@ export function BookingActions({
           <Button
             type="button"
             size="sm"
-            variant="secondary"
+            variant=""
             disabled={loading}
             onClick={bookSlot}>
             <Send />{" "}
