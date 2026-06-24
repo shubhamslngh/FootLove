@@ -19,19 +19,26 @@ import { LottieAnimation } from "@/components/lottie-animation";
 import { ManagerApplicationForm } from "@/components/manager-application-form";
 import { MatchCard } from "@/components/match-card";
 import { PendingBookingCard } from "@/components/pending-booking-card";
+import { PlayerCardDialog } from "@/components/player-card-dialog";
 import { VenueApprovalActions } from "@/components/venue-approval-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/server/auth";
+import { canHavePlayerCard, getEmptyPlayerStats } from "@/lib/player-card";
 import { readDb, withVenue } from "@/lib/server/db";
 import { formatDisplayDate } from "@/lib/utils";
+import {
+  canAcceptBookings,
+  isPastOrCompletedMatch,
+} from "@/lib/match-state";
 import {
   canBookMatch,
   canHostMatch,
   canManagePlatform,
   ROLES,
 } from "@/lib/server/roles";
+import { buildLeaderboard } from "@/lib/server/stats";
 
 const playerCategories = [
   {
@@ -84,9 +91,15 @@ export default async function DashboardPage() {
   const canHost = canHostMatch(user);
   const canBook = canBookMatch(user.role);
   const isAdmin = canManagePlatform(user.role);
-  const userBookings = db.bookings.filter(
-    (booking) => booking.userId === user.id,
-  );
+  const hasPlayerCard = canHavePlayerCard(user);
+  const playerStats =
+    hasPlayerCard
+      ? buildLeaderboard({
+          matches: db.matches,
+          bookings: db.bookings,
+          users: db.users,
+        }).find((row) => row.userId === user.id) || getEmptyPlayerStats(user)
+      : null;
   const pendingBookings = db.bookings.filter(
     (booking) => booking.status === "pending",
   ).map((booking) => ({
@@ -145,22 +158,26 @@ export default async function DashboardPage() {
         matchBookings.find((booking) => booking.userId === user.id) || null,
     };
   });
-  const now = new Date();
-  const getMatchDateTime = (match) =>
-    new Date(`${match.date}T${match.time || "00:00"}`);
   const upcomingMatches = matches
-    .filter((match) => getMatchDateTime(match) >= now)
-    .sort((a, b) => getMatchDateTime(b) - getMatchDateTime(a));
+    .filter((match) => !isPastOrCompletedMatch(match))
+    .sort(
+      (a, b) =>
+        new Date(`${a.date}T${a.time || "00:00"}`) -
+        new Date(`${b.date}T${b.time || "00:00"}`),
+    );
   const pastMatches = matches
-    .filter((match) => getMatchDateTime(match) < now)
-    .sort((a, b) => getMatchDateTime(b) - getMatchDateTime(a));
-  const participatedMatches = userBookings
-    .filter((booking) => booking.status === "confirmed")
-    .map((booking) => ({
-      match: matches.find((match) => match.id === booking.matchId),
-      booking,
-    }))
-    .filter((item) => item.match);
+    .filter((match) => isPastOrCompletedMatch(match))
+    .sort(
+      (a, b) =>
+        new Date(`${b.date}T${b.time || "00:00"}`) -
+        new Date(`${a.date}T${a.time || "00:00"}`),
+    );
+  const bookableMatches = upcomingMatches.filter(
+    (match) =>
+      canAcceptBookings(match) &&
+      match.booked + match.pendingCount < match.capacity &&
+      !["pending", "confirmed"].includes(match.userBooking?.status),
+  );
 
   const playerHomePanel = (
     <div className="space-y-6">
@@ -199,22 +216,23 @@ export default async function DashboardPage() {
 
       <section className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-lg font-bold">My participated matches</h2>
-          <Badge variant="secondary">{participatedMatches.length}</Badge>
+          <h2 className="text-lg font-bold">Upcoming matches</h2>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/matches">View all</Link>
+          </Button>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
-          {participatedMatches.map(({ match, booking }) => (
+          {bookableMatches.slice(0, 4).map((match) => (
             <MatchCard
-              key={booking.id}
+              key={match.id}
               match={match}
               canBook
-              existingBooking={booking}
               pendingCount={match.pendingCount}
             />
           ))}
-          {!participatedMatches.length && (
+          {!bookableMatches.length && (
             <div className="rounded-2xl bg-card p-5 text-sm font-semibold text-muted-foreground shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border md:col-span-2">
-              Matches you book or join will appear here.
+              No bookable matches are available right now.
             </div>
           )}
         </div>
@@ -682,6 +700,9 @@ export default async function DashboardPage() {
         />
       ) : (
         overviewPanel
+      )}
+      {hasPlayerCard && (
+        <PlayerCardDialog user={user} stats={playerStats} trigger="floating" />
       )}
     </AppShell>
   );

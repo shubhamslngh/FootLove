@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/server/auth";
 import { updateDb } from "@/lib/server/db";
 import { fail, ok, parseJson } from "@/lib/server/http";
 import { canBookMatch } from "@/lib/server/roles";
+import { canAcceptBookings } from "@/lib/match-state";
 
 export async function POST(request, { params }) {
   const { id } = await params;
@@ -19,15 +20,21 @@ export async function POST(request, { params }) {
   if (!user && guestName.length < 2) {
     return fail("Enter your name to book as a guest");
   }
-  if (!paymentReference) {
-    return fail("Enter the UPI transaction reference after payment");
-  }
   let booking;
 
   await updateDb((db) => {
     const match = db.matches.find((candidate) => candidate.id === id);
     if (!match) {
       booking = { error: "Match not found" };
+      return db;
+    }
+    if (!canAcceptBookings(match)) {
+      booking = {
+        error:
+          match.status === "completed"
+            ? "This match is already completed"
+            : "Booking is closed for this match",
+      };
       return db;
     }
 
@@ -55,8 +62,8 @@ export async function POST(request, { params }) {
       ...(user ? { userId: user.id } : { guestName }),
       slotRole,
       status: "pending",
-      paymentStatus: "paid_pending_verification",
-      paymentReference,
+      paymentStatus: "payment_claimed",
+      ...(paymentReference ? { paymentReference } : {}),
       createdAt: new Date().toISOString(),
     };
 

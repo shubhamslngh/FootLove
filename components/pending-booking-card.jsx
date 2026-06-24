@@ -19,7 +19,7 @@ export function PendingBookingCard({ booking }) {
             </p>
           </div>
         </div>
-        <Badge variant="secondary">Payment review</Badge>
+        <Badge variant="secondary">Payment claimed</Badge>
       </div>
       <div className="grid grid-cols-2 gap-px bg-border">
         <Detail icon={CalendarDays} label="Match">
@@ -32,7 +32,7 @@ export function PendingBookingCard({ booking }) {
           {booking.slotRole}
         </Detail>
         <Detail icon={CreditCard} label="UPI reference">
-          {booking.paymentReference || "Not provided"}
+          {booking.paymentReference || "User did not provide one"}
         </Detail>
       </div>
       <div className="p-3">

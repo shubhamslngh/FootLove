@@ -1,14 +1,12 @@
 import { updateDb } from "@/lib/server/db";
 import { fail, ok, requireUser } from "@/lib/server/http";
-import { canHostMatch } from "@/lib/server/roles";
+import { canManagePlatform } from "@/lib/server/roles";
 import { randomUUID } from "node:crypto";
 
 export async function POST(_request, { params }) {
   const { id } = await params;
   const { user, error } = await requireUser();
   if (error) return error;
-  if (!canHostMatch(user)) return fail("Only verified hosts and admins can confirm bookings", 403);
-
   let result;
   await updateDb((db) => {
     const booking = db.bookings.find((candidate) => candidate.id === id);
@@ -25,11 +23,22 @@ export async function POST(_request, { params }) {
       result = { error: "Match not found", status: 404 };
       return db;
     }
+    if (
+      match.hostUserId !== user.id &&
+      !canManagePlatform(user.role)
+    ) {
+      result = {
+        error: "Only this match host or an admin can confirm bookings",
+        status: 403,
+      };
+      return db;
+    }
     if (match.booked >= match.capacity) {
       result = { error: "Match is full", status: 409 };
       return db;
     }
     booking.status = "confirmed";
+    booking.paymentStatus = "confirmed";
     booking.confirmedByUserId = user.id;
     booking.confirmedAt = new Date().toISOString();
     match.booked += 1;

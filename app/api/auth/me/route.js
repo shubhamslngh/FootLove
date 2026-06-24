@@ -18,6 +18,7 @@ export async function PUT(request) {
   const username = String(body?.username || "").trim().toLowerCase();
   const phone = normalizeIndianPhone(body?.phone);
   const pin = String(body?.pin || "");
+  const profileImageDataUrl = String(body?.profileImageDataUrl || "").trim();
 
   if (!name || !username || !phone) {
     return fail("Name, username, and mobile number are required");
@@ -30,6 +31,17 @@ export async function PUT(request) {
   }
   if (pin && !/^\d{6}$/.test(pin)) {
     return fail("New PIN must be exactly 6 digits");
+  }
+  if (
+    profileImageDataUrl &&
+    !/^data:image\/(?:jpeg|png|webp);base64,[a-z0-9+/=\s]+$/i.test(
+      profileImageDataUrl,
+    )
+  ) {
+    return fail("Profile photo must be a JPEG, PNG, or WebP image");
+  }
+  if (profileImageDataUrl.length > 1_500_000) {
+    return fail("Profile photo is too large");
   }
 
   let result;
@@ -63,6 +75,7 @@ export async function PUT(request) {
     user.name = name;
     user.username = username;
     user.phone = phone;
+    user.profileImageDataUrl = profileImageDataUrl || undefined;
     if (pin) user.passwordHash = hashPassword(pin);
     result = { user };
     return db;

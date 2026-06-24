@@ -1,49 +1,54 @@
 import { redirect } from "next/navigation";
-import { CalendarCheck, Goal, ShieldCheck, Trophy } from "lucide-react";
+import {
+  CalendarCheck,
+  Goal,
+  ShieldCheck,
+  Star,
+  Trophy,
+} from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { LogoutButton } from "@/components/logout-button";
+import { PlayerCardDialog } from "@/components/player-card-dialog";
 import { ProfileForm } from "@/components/profile-form";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  canHavePlayerCard,
+  formatPoints,
+  getEmptyPlayerStats,
+} from "@/lib/player-card";
 import { getCurrentUser } from "@/lib/server/auth";
 import { readDb } from "@/lib/server/db";
 import { ROLES } from "@/lib/server/roles";
+import { buildLeaderboard } from "@/lib/server/stats";
 
 export default async function ProfilePage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
   const db = await readDb();
+  const leaderboard = buildLeaderboard({
+    matches: db.matches,
+    bookings: db.bookings,
+    users: db.users,
+  });
+  const playerStats =
+    leaderboard.find((row) => row.userId === user.id) ||
+    getEmptyPlayerStats(user);
   const userBookings = db.bookings.filter(
     (booking) => booking.userId === user.id,
-  );
-  const confirmedBookings = userBookings.filter(
-    (booking) => booking.status === "confirmed",
   );
   const hostedMatches = db.matches.filter(
     (match) => match.hostUserId === user.id,
   );
-  const completedMatches = db.matches.filter(
-    (match) =>
-      match.status === "completed" &&
-      (match.hostUserId === user.id ||
-        confirmedBookings.some((booking) => booking.matchId === match.id)),
-  );
-  const goals = db.matches.reduce(
-    (total, match) =>
-      total +
-      (match.events || []).filter(
-        (event) => event.type === "goal" && event.scorerUserId === user.id,
-      ).length,
-    0,
-  );
+  const hasPlayerCard = canHavePlayerCard(user);
   const stats =
     user.role === ROLES.PLAYER
       ? [
           { label: "Bookings", value: userBookings.length, icon: CalendarCheck },
-          { label: "Played", value: completedMatches.length, icon: Trophy },
-          { label: "Goals", value: goals, icon: Goal },
+          { label: "Played", value: playerStats.played, icon: Trophy },
+          { label: "Goals", value: playerStats.goals, icon: Goal },
         ]
       : [
           { label: "Hosted", value: hostedMatches.length, icon: CalendarCheck },
@@ -94,6 +99,48 @@ export default async function ProfilePage() {
           ))}
         </section>
 
+        {hasPlayerCard && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between gap-3">
+                <span className="flex items-center gap-2">
+                  <Star className="size-5 text-primary" />
+                  Your player stats
+                </span>
+                <PlayerCardDialog user={user} stats={playerStats} />
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <ProfileStat
+                  label="Rank"
+                  value={playerStats.rank ? `#${playerStats.rank}` : "-"}
+                />
+                <ProfileStat
+                  label="Points"
+                  value={formatPoints(playerStats.points)}
+                />
+                <ProfileStat label="Played" value={playerStats.played} />
+                <ProfileStat label="Wins" value={playerStats.wins} />
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <ProfileStat label="Goals" value={playerStats.goals} />
+                <ProfileStat label="Assists" value={playerStats.assists} />
+                <ProfileStat label="Fouls" value={playerStats.fouls} muted />
+                <ProfileStat
+                  label="Cards"
+                  value={playerStats.yellowCards + playerStats.redCards}
+                  muted
+                />
+              </div>
+              <p className="text-sm font-semibold text-muted-foreground">
+                Card upgrades automatically as completed matches add goals,
+                assists, wins, and clean participation stats.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         <Card>
           <CardHeader>
             <CardTitle>Manage profile</CardTitle>
@@ -108,5 +155,18 @@ export default async function ProfilePage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function ProfileStat({ label, value, muted = false }) {
+  return (
+    <div className="rounded-2xl bg-secondary p-3">
+      <p className={`text-2xl font-black ${muted ? "text-muted-foreground" : ""}`}>
+        {value}
+      </p>
+      <p className="text-xs font-bold uppercase text-muted-foreground">
+        {label}
+      </p>
+    </div>
   );
 }

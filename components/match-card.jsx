@@ -16,6 +16,7 @@ import { BookingActions } from "@/components/booking-actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDisplayDate } from "@/lib/utils";
+import { getMatchState, isMatchScheduledToday } from "@/lib/match-state";
 
 const TEAM_NAMES = [
   "Thunder",
@@ -91,7 +92,18 @@ export function MatchCard({
     : "UPCOMING";
   const dateLabel = formatDisplayDate(match.date);
   const hasScore = match.homeScore != null && match.awayScore != null;
-  const isPlayerCard = canBook;
+  const matchState = getMatchState(match);
+  const isCompleted = matchState === "completed";
+  const isExpired = matchState === "expired";
+  const isPlayerCard = canBook && matchState === "active";
+  const canShowBooking = canBook && matchState === "active";
+  const closesAtMidnight =
+    matchState === "active" && isMatchScheduledToday(match);
+  const actionHref = isCompleted
+    ? `/matches/${match.id}/score`
+    : detailHref;
+  const actionLabel = isCompleted ? "View score" : "View details";
+  const displayStatus = isExpired ? "AWAITING RESULT" : matchStatus;
 
   async function shareMatch() {
     setShareStatus("");
@@ -141,7 +153,7 @@ export function MatchCard({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <span className="rounded-full bg-secondary px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-normal text-secondary-foreground">
-              {preview ? "PREVIEW" : matchStatus}
+              {preview ? "PREVIEW" : displayStatus}
             </span>
             {isPlayerCard && (
               <ChevronDown
@@ -205,10 +217,19 @@ export function MatchCard({
               {venueArea ? `, ${venueArea}` : ""}
             </p>
           </div>
-          <p className="shrink-0 font-semibold text-foreground">
-            {remaining} of {match.capacity} slots left
-            {showPending && pendingCount ? ` · ${pendingCount} pending` : ""}
-          </p>
+          {!isCompleted && !isExpired && (
+            <div className="shrink-0 text-right">
+              <p className="font-semibold text-foreground">
+                {remaining} of {match.capacity} slots left
+                {showPending && pendingCount ? ` · ${pendingCount} pending` : ""}
+              </p>
+              {closesAtMidnight && (
+                <p className="mt-0.5 font-semibold text-amber-600 dark:text-amber-300">
+                  {/* Booking closes before one hour of match start. */}
+                </p>
+              )}
+            </div>
+          )}
         </div>
         </button>
 
@@ -256,15 +277,17 @@ export function MatchCard({
                         {match.format} · {match.level || "Open"}
                       </p>
                     </div>
-                    <div className="bg-secondary p-3">
-                      <IndianRupee className="size-4 text-primary" />
-                      <p className="mt-2 text-[0.65rem] text-muted-foreground">
-                        Entry and availability
-                      </p>
-                      <p className="text-xs font-bold">
-                        ₹{match.price} · {remaining} slots
-                      </p>
-                    </div>
+                    {!isCompleted && !isExpired && (
+                      <div className="bg-secondary p-3">
+                        <IndianRupee className="size-4 text-primary" />
+                        <p className="mt-2 text-[0.65rem] text-muted-foreground">
+                          Entry and availability
+                        </p>
+                        <p className="text-xs font-bold">
+                          ₹{match.price} · {remaining} slots
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -272,8 +295,8 @@ export function MatchCard({
           <div className="grid grid-cols-[1fr_auto] gap-2">
             {!hideViewDetails && (
               <Button asChild size="sm">
-                <Link href={detailHref} className="w-full justify-center">
-                  View details
+                <Link href={actionHref} className="w-full justify-center">
+                  {actionLabel}
                 </Link>
               </Button>
             )}
@@ -297,7 +320,7 @@ export function MatchCard({
             </div>
           </div>
         </div>}
-        {canBook && (
+        {canShowBooking && (
           <BookingActions
             match={{ ...match, pendingCount }}
             existingBooking={existingBooking}

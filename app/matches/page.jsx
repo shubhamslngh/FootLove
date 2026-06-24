@@ -9,6 +9,7 @@ import { getCurrentUser } from "@/lib/server/auth";
 import { readDb, withVenue } from "@/lib/server/db";
 import { canBookMatch, canHostMatch } from "@/lib/server/roles";
 import { formatDisplayDate } from "@/lib/utils";
+import { isPastOrCompletedMatch } from "@/lib/match-state";
 
 export default async function MatchesPage() {
   const user = await getCurrentUser();
@@ -26,9 +27,16 @@ export default async function MatchesPage() {
     };
   });
   const myBookings = db.bookings
-    .filter((booking) => booking.userId === user.id)
+    .filter(
+      (booking) =>
+        booking.userId === user.id &&
+        ["pending", "confirmed"].includes(booking.status),
+    )
     .map((booking) => ({ ...booking, match: matches.find((match) => match.id === booking.matchId) }))
-    .filter((booking) => booking.match);
+    .filter(
+      (booking) =>
+        booking.match && !isPastOrCompletedMatch(booking.match),
+    );
   const pendingBookings = db.bookings
     .filter((booking) => booking.status === "pending")
     .map((booking) => ({
@@ -39,6 +47,12 @@ export default async function MatchesPage() {
         : { name: booking.guestName, role: "guest" },
     }))
     .filter((booking) => booking.match && booking.player);
+  const activeMatches = matches.filter(
+    (match) => !isPastOrCompletedMatch(match),
+  );
+  const pastMatches = matches.filter((match) =>
+    isPastOrCompletedMatch(match),
+  );
 
   return (
     <AppShell user={user}>
@@ -70,10 +84,10 @@ export default async function MatchesPage() {
         <section className="space-y-3">
           <h2 className="text-lg font-bold">Open matches</h2>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {matches.map((match) => (
+            {activeMatches.map((match) => (
               <MatchCard key={match.id} match={match} canBook={canBook} existingBooking={match.userBooking} pendingCount={match.pendingCount} showPending={canHost} />
             ))}
-            {!matches.length && (
+            {!activeMatches.length && (
               <div className="rounded-[24px] bg-card p-5 text-sm font-semibold text-muted-foreground shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border md:col-span-2 lg:col-span-3">
                 No matches have been published yet.
               </div>
@@ -110,14 +124,26 @@ export default async function MatchesPage() {
           </div>
         </section>
 
-        {!canHost && (
-          <section className="space-y-3">
-            <h2 className="text-lg font-bold">Past matches</h2>
-            <div className="rounded-[24px] bg-card p-5 text-sm font-semibold text-muted-foreground shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border">
-            Completed matches will appear here.
-            </div>
-          </section>
-        )}
+        <section className="space-y-3">
+          <h2 className="text-lg font-bold">Past matches</h2>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {pastMatches.map((match) => (
+              <MatchCard
+                key={match.id}
+                match={match}
+                canBook={canBook}
+                existingBooking={match.userBooking}
+                pendingCount={match.pendingCount}
+                showPending={canHost}
+              />
+            ))}
+            {!pastMatches.length && (
+              <div className="rounded-[24px] bg-card p-5 text-sm font-semibold text-muted-foreground shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border md:col-span-2 lg:col-span-3">
+                Completed and awaiting-result matches will appear here.
+              </div>
+            )}
+          </div>
+        </section>
       </div>
     </AppShell>
   );

@@ -4,7 +4,7 @@ import { Swords } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { MatchCard } from "@/components/match-card";
-import { MatchManagementActions } from "@/components/match-management-actions";
+import { MatchHostTabs } from "@/components/match-host-tabs";
 import { PlayerRosterItem } from "@/components/player-roster-item";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -108,11 +108,22 @@ export default async function MatchDetailPage({ params }) {
   const canScore =
     Boolean(user) &&
     (match.hostUserId === user.id || canManagePlatform(user.role));
-  const canManage = canScore;
+  const canManage =
+    Boolean(user) &&
+    (match.hostUserId === user.id || canManagePlatform(user.role));
+  const canViewScore = match.status === "completed";
   const canBook = !user || canBookMatch(user.role);
   const existingBooking = user
     ? allBookings.find((booking) => booking.userId === user.id) || null
     : null;
+  const hostBookings = allBookings.map((booking) => ({
+    ...booking,
+    confirmedByName: booking.confirmedByUserId
+      ? db.users.find(
+          (candidate) => candidate.id === booking.confirmedByUserId,
+        )?.name || booking.confirmedByUserId
+      : null,
+  }));
 
   return (
     <AppShell user={user}>
@@ -128,15 +139,15 @@ export default async function MatchDetailPage({ params }) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {canScore && (
+            {(canScore || canViewScore) && (
               <Button asChild size="sm">
                 <Link href={`/matches/${match.id}/score`}>
                   <Swords />
-                  {match.status === "live"
+                  {canViewScore
+                    ? "View score"
+                    : match.status === "live"
                     ? "Open scoring"
-                    : match.status === "completed"
-                      ? "View score"
-                      : "Set teams & kick off"}
+                    : "Set teams & kick off"}
                 </Link>
               </Button>
             )}
@@ -149,7 +160,10 @@ export default async function MatchDetailPage({ params }) {
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <div
+          className={`grid gap-4 ${
+            canManage ? "" : "lg:grid-cols-[1.5fr_1fr]"
+          }`}>
           <div className="grid content-start gap-3">
             <MatchCard
               match={matchWithVenue}
@@ -181,13 +195,16 @@ export default async function MatchDetailPage({ params }) {
               </CardContent>
             </Card>
             {canManage && (
-              <MatchManagementActions
+              <MatchHostTabs
                 match={match}
+                bookings={hostBookings}
+                remaining={remaining}
                 hostBooking={existingBooking}
               />
             )}
           </div>
 
+          {!canManage && (
           <Card className="overflow-hidden bg-card/95 ring-1 ring-border">
             <CardHeader>
               <CardTitle className="text-lg">Player roster</CardTitle>
@@ -233,6 +250,7 @@ export default async function MatchDetailPage({ params }) {
               </div>
             </CardContent>
           </Card>
+          )}
         </div>
       </div>
     </AppShell>

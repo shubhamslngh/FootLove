@@ -1,14 +1,12 @@
 import { updateDb } from "@/lib/server/db";
 import { fail, ok, requireUser } from "@/lib/server/http";
-import { canHostMatch } from "@/lib/server/roles";
+import { canManagePlatform } from "@/lib/server/roles";
 import { randomUUID } from "node:crypto";
 
 export async function POST(_request, { params }) {
   const { id } = await params;
   const { user, error } = await requireUser();
   if (error) return error;
-  if (!canHostMatch(user)) return fail("Only verified hosts and admins can reject bookings", 403);
-
   let result;
   await updateDb((db) => {
     const booking = db.bookings.find((candidate) => candidate.id === id);
@@ -20,12 +18,27 @@ export async function POST(_request, { params }) {
       result = { error: "Only pending bookings can be rejected", status: 409 };
       return db;
     }
-    booking.status = "rejected";
-    booking.rejectedByUserId = user.id;
-    booking.rejectedAt = new Date().toISOString();
     const match = db.matches.find(
       (candidate) => candidate.id === booking.matchId,
     );
+    if (!match) {
+      result = { error: "Match not found", status: 404 };
+      return db;
+    }
+    if (
+      match.hostUserId !== user.id &&
+      !canManagePlatform(user.role)
+    ) {
+      result = {
+        error: "Only this match host or an admin can reject bookings",
+        status: 403,
+      };
+      return db;
+    }
+    booking.status = "rejected";
+    booking.paymentStatus = "not_verified";
+    booking.rejectedByUserId = user.id;
+    booking.rejectedAt = new Date().toISOString();
     if (booking.userId) {
       db.notifications ??= [];
       db.notifications.push({

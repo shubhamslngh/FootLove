@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
+import { MatchHostTabs } from "@/components/match-host-tabs";
 import { MatchScoringConsole } from "@/components/match-scoring-console";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/lib/server/auth";
@@ -16,14 +17,21 @@ export default async function MatchScorePage({ params }) {
   const db = await readDb();
   const match = db.matches.find((candidate) => candidate.id === id);
   if (!match) redirect("/matches");
-  if (match.hostUserId !== user.id && !canManagePlatform(user.role)) {
+  const canManageMatch =
+    match.hostUserId === user.id || canManagePlatform(user.role);
+  if (
+    match.status !== "completed" &&
+    !canManageMatch
+  ) {
     redirect(`/matches/${id}`);
   }
 
-  const players = db.bookings
+  const matchBookings = db.bookings.filter(
+    (booking) => booking.matchId === id,
+  );
+  const players = matchBookings
     .filter(
-      (booking) =>
-        booking.matchId === id && booking.status === "confirmed",
+      (booking) => booking.status === "confirmed",
     )
     .map((booking) => {
       const player = publicUser(
@@ -38,6 +46,36 @@ export default async function MatchScorePage({ params }) {
         isOffline: !booking.userId,
       };
     });
+  const hostBookings = matchBookings.map((booking) => {
+    const player = publicUser(
+      db.users.find((candidate) => candidate.id === booking.userId),
+    );
+    return {
+      ...booking,
+      player: player || {
+        name: booking.guestName,
+        username: booking.guestUsername,
+        phone: booking.guestPhone,
+        role: booking.guestUsername ? "offline" : "guest",
+      },
+      confirmedByName: booking.confirmedByUserId
+        ? db.users.find(
+            (candidate) => candidate.id === booking.confirmedByUserId,
+          )?.name || booking.confirmedByUserId
+        : null,
+    };
+  });
+  const pendingCount = matchBookings.filter(
+    (booking) => booking.status === "pending",
+  ).length;
+  const remaining = Math.max(
+    0,
+    Number(match.capacity || 0) -
+      Number(match.booked || 0) -
+      pendingCount,
+  );
+  const hostBooking =
+    matchBookings.find((booking) => booking.userId === user.id) || null;
 
   return (
     <AppShell user={user}>
@@ -52,7 +90,20 @@ export default async function MatchScorePage({ params }) {
           </div>
           <Badge>{match.status}</Badge>
         </div>
-        <MatchScoringConsole match={match} players={players} />
+        <MatchScoringConsole
+          match={match}
+          players={players}
+          canManageCompleted={canManageMatch}
+        />
+        {match.status === "completed" && canManageMatch && (
+          <MatchHostTabs
+            match={match}
+            bookings={hostBookings}
+            remaining={remaining}
+            hostBooking={hostBooking}
+            defaultTab="players"
+          />
+        )}
         <Link
           href={`/matches/${id}`}
           className="inline-block text-sm font-semibold text-primary">

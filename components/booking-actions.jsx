@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CreditCard, QrCode, Send, Ticket } from "lucide-react";
+import { ArrowLeft, Maximize2, Send, Ticket, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,7 +29,7 @@ export function BookingActions({
   const [slotRole, setSlotRole] = useState(match.slotRoles?.[0] || "Any role");
   const [paymentReference, setPaymentReference] = useState("");
   const [guestName, setGuestName] = useState("");
-  const [showQr, setShowQr] = useState(false);
+  const [qrExpanded, setQrExpanded] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const isFull = match.booked + (match.pendingCount || 0) >= match.capacity;
@@ -45,6 +45,20 @@ export function BookingActions({
   const qrUrl =
     match.qrCodeDataUrl ||
     `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(paymentHref)}`;
+
+  useEffect(() => {
+    if (!qrExpanded) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setQrExpanded(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [qrExpanded]);
 
   async function bookSlot() {
     setMessage("");
@@ -196,45 +210,90 @@ export function BookingActions({
         </>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-2">
-            <Button asChild size="sm">
-              <a href={paymentHref}>
-                <CreditCard /> Pay ₹{match.price}
-              </a>
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setShowQr((current) => !current)}>
-              <QrCode /> {showQr ? "Hide QR" : "Show QR"}
-            </Button>
-          </div>
-          {showQr && (
-            <div className="grid justify-items-center gap-2 rounded-xl bg-card p-3">
+          <div className="grid justify-items-center gap-2 rounded-xl bg-card p-3">
+            <div
+              className="relative rounded-2xl bg-white p-2 shadow-[0_8px_22px_rgba(17,24,39,0.08)] ring-1 ring-border"
+              role="button"
+              tabIndex={0}
+              onClick={() => setQrExpanded(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setQrExpanded(true);
+                }
+              }}
+              aria-label="Open payment QR full screen">
               <img
-                className="rounded-2xl bg-white p-2 shadow-[0_8px_22px_rgba(17,24,39,0.08)] ring-1 ring-border"
                 src={qrUrl}
                 alt="UPI payment QR code"
-                width="180"
-                height="180"
+                width="220"
+                height="220"
+                className="cursor-zoom-in"
               />
-              <p className="text-xs text-muted-foreground">UPI ID: {upiId}</p>
+              <span className="absolute bottom-3 right-3 grid size-9 place-items-center rounded-full bg-black/75 text-white shadow-lg">
+                <Maximize2 className="size-4" />
+              </span>
+            </div>
+            <p className="text-sm font-bold">Scan to pay ₹{match.price}</p>
+            <p className="max-w-xs text-center text-xs text-muted-foreground">
+              On mobile, long-press the QR and choose PhonePe, GPay, or another
+              UPI app. Tap once to enlarge.
+            </p>
+            <p className="text-xs font-semibold text-muted-foreground">
+              UPI ID: {upiId}
+            </p>
+          </div>
+          {qrExpanded && (
+            <div
+              className="fixed inset-0 z-[100] grid bg-black/80 p-4 backdrop-blur-sm"
+              role="presentation"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) setQrExpanded(false);
+              }}>
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label="UPI payment QR"
+                className="relative m-auto grid w-full max-w-sm justify-items-center gap-3 rounded-3xl bg-white p-6 text-slate-950 shadow-2xl">
+                <button
+                  type="button"
+                  onClick={() => setQrExpanded(false)}
+                  className="absolute right-3 top-3 grid size-10 place-items-center rounded-full bg-slate-100"
+                  aria-label="Close payment QR">
+                  <X className="size-5" />
+                </button>
+                <p className="text-lg font-black">Pay ₹{match.price}</p>
+              <img
+                className="mt-2 size-full max-w-[300px] object-contain"
+                src={qrUrl}
+                alt="UPI payment QR code"
+                width="300"
+                height="300"
+              />
+                <p className="text-sm font-semibold">UPI ID: {upiId}</p>
+                <p className="text-center text-xs text-slate-500">
+                  Long-press the QR and choose PhonePe, GPay, or another UPI
+                  app. After payment, close this view and request confirmation.
+                </p>
+              </div>
             </div>
           )}
           <Input
             value={paymentReference}
             onChange={(event) => setPaymentReference(event.target.value)}
-            placeholder="Enter UPI transaction reference"
+            placeholder="Transaction reference (optional)"
           />
+          <p className="text-xs text-muted-foreground">
+            The host will verify your payment before confirming the slot.
+          </p>
           <Button
             type="button"
             size="sm"
             variant="secondary"
-            disabled={loading || !paymentReference.trim()}
+            disabled={loading}
             onClick={bookSlot}>
             <Send />{" "}
-            {loading ? "Submitting..." : "Confirm payment and book"}
+            {loading ? "Submitting..." : "I’ve paid — request booking"}
           </Button>
         </>
       )}

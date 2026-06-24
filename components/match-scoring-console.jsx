@@ -46,7 +46,11 @@ const GOAL_TYPES = [
   ["penalty", "Penalty"],
 ];
 
-export function MatchScoringConsole({ match, players }) {
+export function MatchScoringConsole({
+  match,
+  players,
+  canManageCompleted = false,
+}) {
   const router = useRouter();
   const [scoringPlayers, setScoringPlayers] = useState(players);
   const [assignments, setAssignments] = useState(() =>
@@ -427,7 +431,36 @@ export function MatchScoringConsole({ match, players }) {
     return (
       <div className="grid gap-4">
         <MatchStats match={liveMatch} players={activePlayers} />
+        {canManageCompleted && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => setShowManage(true)}>
+            <Settings />
+            Match settings
+          </Button>
+        )}
         <StatusMessage message={message} />
+        {showManage && (
+          <ManageDrawer
+            match={liveMatch}
+            players={activePlayers}
+            loading={loading}
+            isCompleted
+            teamNameDraft={teamNameDraft}
+            setTeamNameDraft={setTeamNameDraft}
+            showAddPlayer={false}
+            setShowAddPlayer={setShowAddPlayer}
+            offlinePlayer={offlinePlayer}
+            setOfflinePlayer={setOfflinePlayer}
+            playerLookup={playerLookup}
+            onClose={() => setShowManage(false)}
+            onSaveTeamNames={updateTeamNames}
+            onAddPlayer={addOfflinePlayer}
+            onRemovePlayer={removePlayer}
+          />
+        )}
       </div>
     );
   }
