@@ -152,6 +152,7 @@ export function HostMatchForm({ venues, paymentMethod, initialMatch = null }) {
       slotRoles: "",
       notes: "",
     });
+    router.push("/matches");
     router.refresh();
   }
 

@@ -1,6 +1,8 @@
 import { updateDb } from "@/lib/server/db";
 import { fail, ok, parseJson, requireUser } from "@/lib/server/http";
 import { canManagePlatform } from "@/lib/server/roles";
+import { buildLeaderboard } from "@/lib/server/stats";
+import { randomUUID } from "node:crypto";
 
 function canControlMatch(user, match) {
   return canManagePlatform(user.role) || match.hostUserId === user.id;
@@ -11,6 +13,9 @@ const PLAYER_EVENTS = {
   injury: "Injured",
   yellow_card: "Yellow card",
   red_card: "Red card",
+  save: "Save",
+  defend: "Defend",
+  successful_dribble: "Successful dribble",
 };
 
 function getBookingDisplayName(db, booking) {
@@ -24,6 +29,41 @@ function getBookingDisplayName(db, booking) {
     booking.guestUsername ||
     booking.guestName ||
     null
+  );
+}
+
+function createNotification({
+  userId,
+  type,
+  title,
+  message,
+  matchId,
+  bookingId,
+  meta,
+}) {
+  return {
+    id: `not_${randomUUID()}`,
+    userId,
+    type,
+    title,
+    message,
+    matchId,
+    bookingId: bookingId || null,
+    meta: meta || null,
+    read: false,
+    createdAt: new Date().toISOString(),
+  };
+}
+
+function getLeaderboardByUserId(db) {
+  return new Map(
+    buildLeaderboard({
+      matches: db.matches,
+      bookings: db.bookings,
+      users: db.users,
+    })
+      .filter((row) => row.userId)
+      .map((row) => [row.userId, row]),
   );
 }
 
@@ -59,6 +99,7 @@ export async function POST(request, { params }) {
     }
 
     if (finish) {
+      const leaderboardBefore = getLeaderboardByUserId(db);
       if (match.timerRunning && match.timerStartedAt) {
         match.elapsedSeconds =
           Number(match.elapsedSeconds || 0) +
@@ -79,6 +120,103 @@ export async function POST(request, { params }) {
         elapsedSeconds: match.elapsedSeconds,
         createdAt: match.completedAt,
       });
+
+      const winningTeam =
+        Number(match.homeScore || 0) === Number(match.awayScore || 0)
+          ? null
+          : Number(match.homeScore || 0) > Number(match.awayScore || 0)
+            ? "home"
+            : "away";
+      const finalScore = `${Number(match.homeScore || 0)}-${Number(match.awayScore || 0)}`;
+      const winningBookings = winningTeam
+        ? db.bookings.filter(
+            (booking) =>
+              booking.matchId === match.id &&
+              booking.status === "confirmed" &&
+              booking.team === winningTeam &&
+              booking.userId,
+          )
+        : [];
+      const scorerIds = new Set(
+        (match.events || [])
+          .filter(
+            (event) =>
+              event.type === "goal" &&
+              Number(event.change || 0) > 0 &&
+              event.scorerUserId,
+          )
+          .map((event) => event.scorerUserId),
+      );
+
+      db.notifications ??= [];
+      for (const booking of winningBookings) {
+        db.notifications.push(
+          createNotification({
+            userId: booking.userId,
+            type: "match_won",
+            title: "You won the match",
+            message: `You won ${match.title} ${finalScore}.`,
+            matchId: match.id,
+            bookingId: booking.id,
+            meta: { finalScore, result: "won", team: winningTeam },
+          }),
+        );
+      }
+      if (match.hostUserId) {
+        db.notifications.push(
+          createNotification({
+            userId: match.hostUserId,
+            type: "match_result",
+            title: "Match completed",
+            message:
+              winningTeam === null
+                ? `${match.title} finished ${finalScore}.`
+                : `${match.title} finished ${finalScore}. ${winningTeam === "home" ? match.homeTeam : match.awayTeam} won.`,
+            matchId: match.id,
+            meta: { finalScore, winningTeam },
+          }),
+        );
+      }
+
+      const leaderboardAfter = getLeaderboardByUserId(db);
+      for (const scorerUserId of scorerIds) {
+        const before = leaderboardBefore.get(scorerUserId);
+        const after = leaderboardAfter.get(scorerUserId);
+        if (!before || !after) continue;
+        if (
+          after.rank == null ||
+          before.rank == null ||
+          after.rank >= before.rank
+        ) {
+          continue;
+        }
+
+        const scorerBooking = db.bookings.find(
+          (booking) =>
+            booking.matchId === match.id &&
+            booking.userId === scorerUserId &&
+            booking.status === "confirmed",
+        );
+        const scorer = db.users.find((candidate) => candidate.id === scorerUserId);
+        db.notifications.push(
+          createNotification({
+            userId: scorerUserId,
+            type: "rank_up",
+            title: "You ranked up",
+            message: `Your card moved from #${before.rank} to #${after.rank} after ${match.title}.`,
+            matchId: match.id,
+            bookingId: scorerBooking?.id || null,
+            meta: {
+              previousRank: before.rank,
+              currentRank: after.rank,
+              previousPoints: before.points,
+              currentPoints: after.points,
+              scorerName: scorer?.name || null,
+            },
+          }),
+        );
+      }
+
       result = { match };
       return db;
     }

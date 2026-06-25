@@ -135,7 +135,7 @@ export default async function ProfilePage() {
               </div>
               <p className="text-sm font-semibold text-muted-foreground">
                 Card upgrades automatically as completed matches add goals,
-                assists, wins, and clean participation stats.
+                assists, wins, points, and rank changes.
               </p>
             </CardContent>
           </Card>

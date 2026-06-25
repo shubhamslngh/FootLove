@@ -1,24 +1,26 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Check,
-  ChevronLeft,
-  ChevronRight,
+  CircleDot,
+  Goal,
+  HeartCrack,
   History,
   Minus,
   Palette,
   Pause,
   Play,
   Plus,
+  Redo2,
   RotateCcw,
   Settings,
-  Shirt,
+  ShieldAlert,
   Shuffle,
   Swords,
   X,
-  Goal,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -63,7 +65,7 @@ export function MatchScoringConsole({
   );
   const [liveMatch, setLiveMatch] = useState(match);
   const [elapsed, setElapsed] = useState(getElapsed(match));
-  const [selectedTeam, setSelectedTeam] = useState("home");
+  const [isEditingLineup, setIsEditingLineup] = useState(false);
   const [pitchTheme, setPitchTheme] = useState(0);
   const [showTimeline, setShowTimeline] = useState(false);
   const [goalDrawer, setGoalDrawer] = useState(null);
@@ -111,7 +113,7 @@ export function MatchScoringConsole({
     setScoringPlayers((current) =>
       current.map((player) => ({
         ...player,
-        team: player.team || assignments[player.bookingId],
+        team: assignments[player.bookingId] || player.team,
       })),
     );
   }, [assignments]);
@@ -252,11 +254,21 @@ export function MatchScoringConsole({
     });
   }
 
+  function resetLineupAssignments() {
+    setAssignments(
+      Object.fromEntries(
+        scoringPlayers.map((player, index) => [
+          player.bookingId,
+          player.team || (index % 2 === 0 ? "home" : "away"),
+        ]),
+      ),
+    );
+  }
+
   async function addOfflinePlayer() {
-    const nextTeam = isLive
-      ? selectedTeam
-      : Object.values(assignments).filter((team) => team === "home").length <=
-          Object.values(assignments).filter((team) => team === "away").length
+    const nextTeam =
+      Object.values(assignments).filter((team) => team === "home").length <=
+      Object.values(assignments).filter((team) => team === "away").length
         ? "home"
         : "away";
     setLoading("offline-player");
@@ -316,6 +328,43 @@ export function MatchScoringConsole({
     }
     setLiveMatch(result.data.match);
     setMessage("");
+    router.refresh();
+  }
+
+  async function saveLineupChanges() {
+    setLoading("lineup-save");
+    setMessage("");
+    const response = await fetch(`/api/matches/${match.id}/manage`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        homeTeam: liveMatch.homeTeam,
+        awayTeam: liveMatch.awayTeam,
+        assignments: activePlayers.map((player) => ({
+          bookingId: player.bookingId,
+          team: assignments[player.bookingId] || player.team,
+        })),
+      }),
+    });
+    const result = await response.json();
+    setLoading("");
+    if (!response.ok) {
+      setMessage(result?.error?.message || "Could not save lineup");
+      return;
+    }
+    setLiveMatch(result.data.match);
+    setScoringPlayers((current) =>
+      current.map((player) => ({
+        ...player,
+        team: assignments[player.bookingId] || player.team,
+      })),
+    );
+    setAssignments((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([bookingId, team]) => [bookingId, team]),
+      ),
+    );
+    setIsEditingLineup(false);
     router.refresh();
   }
 
@@ -396,6 +445,7 @@ export function MatchScoringConsole({
           match={liveMatch}
           scoringPlayers={scoringPlayers}
           assignments={assignments}
+          isCompleted={isCompleted}
           setAssignments={setAssignments}
           onRandomize={randomizeAssignments}
           showAddPlayer={showAddPlayer}
@@ -424,7 +474,7 @@ export function MatchScoringConsole({
 
   const activePlayers = scoringPlayers.map((player) => ({
     ...player,
-    team: player.team || assignments[player.bookingId],
+    team: assignments[player.bookingId] || player.team,
   }));
 
   if (isCompleted) {
@@ -446,6 +496,8 @@ export function MatchScoringConsole({
           <ManageDrawer
             match={liveMatch}
             players={activePlayers}
+            assignments={assignments}
+            setAssignments={setAssignments}
             loading={loading}
             isCompleted
             teamNameDraft={teamNameDraft}
@@ -457,6 +509,7 @@ export function MatchScoringConsole({
             playerLookup={playerLookup}
             onClose={() => setShowManage(false)}
             onSaveTeamNames={updateTeamNames}
+            onSaveLineup={saveLineupChanges}
             onAddPlayer={addOfflinePlayer}
             onRemovePlayer={removePlayer}
           />
@@ -465,9 +518,8 @@ export function MatchScoringConsole({
     );
   }
 
-  const teamPlayers = activePlayers.filter(
-    (player) => player.team === selectedTeam,
-  );
+  const homePlayers = activePlayers.filter((player) => player.team === "home");
+  const awayPlayers = activePlayers.filter((player) => player.team === "away");
 
   return (
     <div className="grid gap-4">
@@ -477,11 +529,9 @@ export function MatchScoringConsole({
             side="home"
             name={liveMatch.homeTeam}
             score={liveMatch.homeScore}
-            timeouts={liveMatch.homeTimeouts}
             disabled={isCompleted || Boolean(loading)}
             onRemove={() => updateScore("home", -1)}
             onAdd={() => setGoalDrawer(createGoalDraft("home", activePlayers))}
-            onTimeout={() => control("timeout", { team: "home" })}
           />
           <div className="grid justify-items-center gap-1 text-center">
             <p className="text-[0.65rem] font-bold uppercase text-white/55">
@@ -496,11 +546,12 @@ export function MatchScoringConsole({
               onClick={() =>
                 control(liveMatch.timerRunning ? "pause" : "resume")
               }
-              className="mt-1 inline-flex items-center gap-1.5 text-sm font-bold text-white">
+              title={liveMatch.timerRunning ? "Pause match timer" : "Resume match timer"}
+              className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-base font-black text-white ring-1 ring-white/15">
               {liveMatch.timerRunning ? (
-                <Pause className="size-4 text-red-500" />
+                <Pause className="size-5 text-red-400" />
               ) : (
-                <Play className="size-4 text-primary" />
+                <Play className="size-5 text-primary" />
               )}
               {formatTimer(elapsed)}
             </button>
@@ -509,11 +560,9 @@ export function MatchScoringConsole({
             side="away"
             name={liveMatch.awayTeam}
             score={liveMatch.awayScore}
-            timeouts={liveMatch.awayTimeouts}
             disabled={isCompleted || Boolean(loading)}
             onRemove={() => updateScore("away", -1)}
             onAdd={() => setGoalDrawer(createGoalDraft("away", activePlayers))}
-            onTimeout={() => control("timeout", { team: "away" })}
           />
         </div>
       </header>
@@ -536,46 +585,74 @@ export function MatchScoringConsole({
         <div className="relative z-10 flex items-center justify-between">
           <div>
             <p className="text-xs font-bold uppercase text-white/70">Lineup</p>
-            <h2 className="text-lg font-bold">
-              {selectedTeam === "home"
-                ? liveMatch.homeTeam
-                : liveMatch.awayTeam}
-            </h2>
+            <h2 className="text-lg font-bold">Both teams</h2>
           </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            onClick={() =>
-              setSelectedTeam((team) => (team === "home" ? "away" : "home"))
-            }>
-            {selectedTeam === "home" ? <ChevronRight /> : <ChevronLeft />}
-            Switch team
-          </Button>
-        </div>
-        <div className="relative z-10 mt-8 grid grid-cols-3 gap-x-3 gap-y-10">
-          {teamPlayers.map((player, index) => (
-            <div key={player.bookingId} className="grid justify-items-center">
-              <button
+          <div className="flex gap-2">
+            {isEditingLineup ? (
+              <>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={loading === "lineup-save"}
+                  onClick={() => {
+                    resetLineupAssignments();
+                    setIsEditingLineup(false);
+                  }}>
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={loading === "lineup-save"}
+                  onClick={saveLineupChanges}>
+                  {loading === "lineup-save" ? "Saving..." : "Save lineup"}
+                </Button>
+              </>
+            ) : (
+              <Button
                 type="button"
-                disabled={isCompleted}
-                onClick={() => setPlayerAction({ team: selectedTeam, player })}
-                className="relative grid size-16 place-items-center rounded-2xl bg-white text-slate-900 shadow-lg disabled:opacity-70">
-                <Shirt className="size-9" />
-                <span className="absolute bottom-1 text-[0.65rem] font-bold">
-                  {index + 1}
-                </span>
-              </button>
-              <p className="mt-2 max-w-24 truncate text-xs font-bold">
-                @{player.username || player.name}
-              </p>
-            </div>
-          ))}
-          {!teamPlayers.length && (
-            <p className="col-span-3 mt-24 text-center text-sm font-semibold text-white/75">
-              No players assigned to this team.
-            </p>
-          )}
+                size="sm"
+                variant="secondary"
+                onClick={() => setIsEditingLineup(true)}>
+                Edit lineup
+              </Button>
+            )}
+          </div>
+        </div>
+        <div className="relative z-10 mt-8 grid gap-6 md:grid-cols-2">
+          <LiveTeamColumn
+            team="home"
+            title={liveMatch.homeTeam}
+            players={homePlayers}
+            isEditingLineup={isEditingLineup}
+            onSwitchPlayer={(bookingId) => {
+              setAssignments((current) => ({
+                ...current,
+                [bookingId]: "away",
+              }));
+            }}
+            onRemovePlayer={removePlayer}
+            onPlayerClick={(player) =>
+              !isEditingLineup && setPlayerAction({ team: "home", player })
+            }
+          />
+          <LiveTeamColumn
+            team="away"
+            title={liveMatch.awayTeam}
+            players={awayPlayers}
+            isEditingLineup={isEditingLineup}
+            onSwitchPlayer={(bookingId) => {
+              setAssignments((current) => ({
+                ...current,
+                [bookingId]: "home",
+              }));
+            }}
+            onRemovePlayer={removePlayer}
+            onPlayerClick={(player) =>
+              !isEditingLineup && setPlayerAction({ team: "away", player })
+            }
+          />
         </div>
       </section>
 
@@ -583,7 +660,10 @@ export function MatchScoringConsole({
         <section className="rounded-2xl bg-card p-4 ring-1 ring-border">
           <div className="flex items-center justify-between">
             <h2 className="font-bold">Match timeline</h2>
-            <button type="button" onClick={() => setShowTimeline(false)}>
+            <button
+              type="button"
+              title="Close timeline"
+              onClick={() => setShowTimeline(false)}>
               <X className="size-4" />
             </button>
           </div>
@@ -669,6 +749,8 @@ export function MatchScoringConsole({
         <ManageDrawer
           match={liveMatch}
           players={activePlayers}
+          assignments={assignments}
+          setAssignments={setAssignments}
           loading={loading}
           isCompleted={isCompleted}
           teamNameDraft={teamNameDraft}
@@ -680,6 +762,7 @@ export function MatchScoringConsole({
           playerLookup={playerLookup}
           onClose={() => setShowManage(false)}
           onSaveTeamNames={updateTeamNames}
+          onSaveLineup={saveLineupChanges}
           onAddPlayer={addOfflinePlayer}
           onRemovePlayer={removePlayer}
         />
@@ -692,6 +775,7 @@ function TeamAssignment({
   match,
   scoringPlayers,
   assignments,
+  isCompleted,
   setAssignments,
   onRandomize,
   showAddPlayer,
@@ -822,12 +906,12 @@ function TeamAssignment({
         </div>
       )}
 
-      <div className="relative min-h-[520px] overflow-hidden bg-[#168447] p-3 text-white sm:p-5">
+      <div className="relative min-h-130 overflow-hidden bg-[#168447] p-3 text-white sm:p-5">
         <div className="pointer-events-none absolute inset-3 rounded-xl border-2 border-white/65 sm:inset-5" />
         <div className="pointer-events-none absolute inset-x-3 top-1/2 border-t-2 border-white/60 sm:hidden" />
         <div className="pointer-events-none absolute bottom-5 left-1/2 top-5 hidden border-l-2 border-white/60 sm:block" />
         <div className="pointer-events-none absolute left-1/2 top-1/2 size-24 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/60" />
-        <div className="relative z-10 grid min-h-[490px] gap-4 sm:grid-cols-2">
+        <div className="relative z-10 grid min-h-122.5 gap-4 sm:grid-cols-2">
           {["home", "away"].map((team) => {
             const teamPlayers = scoringPlayers.filter(
               (player) => assignments[player.bookingId] === team,
@@ -838,6 +922,7 @@ function TeamAssignment({
                 team={team}
                 meta={teamMeta[team]}
                 players={teamPlayers}
+                isCompleted={isCompleted}
                 onTogglePlayer={(bookingId) =>
                   setAssignments((current) => ({
                     ...current,
@@ -853,7 +938,7 @@ function TeamAssignment({
   );
 }
 
-function LineupSide({ team, meta, players, onTogglePlayer }) {
+function LineupSide({ team, meta, players, isCompleted, onTogglePlayer }) {
   const rows = getLineupRows(players);
 
   return (
@@ -888,18 +973,21 @@ function LineupSide({ team, meta, players, onTogglePlayer }) {
                 key={player.bookingId}
                 type="button"
                 onClick={() => onTogglePlayer(player.bookingId)}
+                disabled={isCompleted}
                 className="grid justify-items-center gap-1 text-center sm:[direction:ltr]">
-                <span
-                  className={`relative grid size-14 place-items-center rounded-2xl shadow-lg ring-2 ring-white/80 ${meta.accent}`}>
-                  <Shirt className="size-8" />
+                <span className="relative grid size-14 place-items-center">
+                  <PlayerStatusIcon player={player} team={team} />
                   <span className="absolute bottom-1 text-[0.6rem] font-black">
                     {players.findIndex(
                       (candidate) => candidate.bookingId === player.bookingId,
                     ) + 1}
                   </span>
                 </span>
-                <span className="max-w-20 truncate text-[0.7rem] font-bold leading-tight text-white drop-shadow">
-                  @{player.username || player.name}
+                <span className="max-w-24 truncate text-[0.7rem] font-bold leading-tight text-white drop-shadow">
+                  {player.name}
+                </span>
+                <span className="max-w-24 truncate text-[0.62rem] font-semibold text-white/80">
+                  @{player.username || "player"}
                 </span>
               </button>
             ))}
@@ -915,7 +1003,80 @@ function LineupSide({ team, meta, players, onTogglePlayer }) {
   );
 }
 
-function TeamScore({ name, timeouts, disabled, onRemove, onAdd, onTimeout }) {
+function LiveTeamColumn({
+  team,
+  title,
+  players,
+  isEditingLineup,
+  onSwitchPlayer,
+  onRemovePlayer,
+  onPlayerClick,
+}) {
+  return (
+    <div className="rounded-2xl border border-white/20 bg-black/12 p-4 backdrop-blur-[1px]">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[0.65rem] font-bold uppercase text-white/70">
+            {team === "home" ? "Home lineup" : "Away lineup"}
+          </p>
+          <h3 className="text-base font-bold">{title}</h3>
+        </div>
+        <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
+          {players.length} players
+        </span>
+      </div>
+      <div className="mt-6 grid grid-cols-3 gap-x-3 gap-y-8">
+        {players.map((player, index) => (
+          <div key={player.bookingId} className="grid justify-items-center">
+            <button
+              type="button"
+              onClick={() => onPlayerClick(player)}
+              className="relative grid size-16 place-items-center">
+              <PlayerStatusIcon player={player} team={team} />
+              <span className="absolute bottom-1 text-[0.65rem] font-bold">
+                {index + 1}
+              </span>
+            </button>
+            <PlayerEventMarkers player={player} />
+            <p className="mt-2 max-w-24 truncate text-center text-xs font-bold">
+              {player.name}
+            </p>
+            <p className="max-w-24 truncate text-center text-[0.65rem] font-semibold text-white/80">
+              @{player.username || "player"}
+            </p>
+            {isEditingLineup && (
+              <div className="mt-2 flex gap-1">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 px-2 text-[0.65rem]"
+                  onClick={() => onSwitchPlayer(player.bookingId)}>
+                  Switch
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-7 px-2 text-[0.65rem]"
+                  onClick={() => onRemovePlayer(player.bookingId)}>
+                  Remove
+                </Button>
+              </div>
+            )}
+          </div>
+        ))}
+        {!players.length && (
+          <p className="col-span-3 py-16 text-center text-sm font-semibold text-white/75">
+            No players assigned to this team.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TeamScore({ name, disabled, onRemove, onAdd }) {
   return (
     <div className="grid justify-items-center gap-2 text-center">
       <div className="grid size-10 place-items-center rounded-full bg-white/10 text-sm font-bold">
@@ -927,6 +1088,7 @@ function TeamScore({ name, timeouts, disabled, onRemove, onAdd, onTimeout }) {
           type="button"
           disabled={disabled}
           onClick={onRemove}
+          title={`Remove goal from ${name}`}
           className="grid size-7 place-items-center rounded-full bg-white/10 disabled:opacity-40">
           <Minus className="size-3.5" />
         </button>
@@ -934,19 +1096,113 @@ function TeamScore({ name, timeouts, disabled, onRemove, onAdd, onTimeout }) {
           type="button"
           disabled={disabled}
           onClick={onAdd}
+          title={`Add goal for ${name}`}
           className="grid size-7 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40">
           <Plus className="size-3.5" />
         </button>
       </div>
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={onTimeout}
-        className="text-[0.65rem] font-bold text-white/65">
-        T/O {timeouts || 0}
-      </button>
     </div>
   );
+}
+
+function PlayerStatusIcon({ player, team }) {
+  const badges = getPlayerStatusBadges(player);
+  const primaryBadge = badges[0];
+
+  return (
+    <div className="relative inline-flex size-16 items-center justify-center">
+      <Image
+        src={team === "away" ? "/JerseyB.png" : "/JerseyA.png"}
+        alt=""
+        width={64}
+        height={64}
+        className="size-full object-contain"
+        priority={false}
+      />
+      {/* Ball icon overlay for goals */}
+      {primaryBadge && (
+        <span className="absolute right-0.5 top-0.5 grid size-5 place-items-center rounded-full bg-black/75 ring-1 ring-white/15">
+          {primaryBadge.src ? (
+            <Image
+              src={primaryBadge.src}
+              alt=""
+              width={12}
+              height={12}
+              className="size-3 object-contain"
+            />
+          ) : (
+            <primaryBadge.icon className={`size-3 ${primaryBadge.accent}`} />
+          )}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function PlayerEventMarkers({ player }) {
+  const markers = getPlayerStatusBadges(player).slice(0, 4);
+  if (!markers.length) return <div className="h-4" />;
+
+  return (
+    <div className="mt-1 flex max-w-24 flex-wrap justify-center gap-1">
+      {markers.map((marker) => (
+        <span
+          key={`${player.bookingId}-${marker.short}`}
+          className="inline-flex items-center gap-1 rounded-full bg-black/35 px-1.5 py-0.5 text-[0.55rem] font-black text-white">
+          <marker.icon className={`size-2.5 ${marker.accent}`} />
+          {marker.short}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function getPlayerStatusBadges(player) {
+  const badges = [];
+  if (player.goals > 0)
+    badges.push({
+      short: "G",
+      icon: Goal,
+      accent: "text-white",
+      src: "/Ballicon.png",
+    });
+  if (player.assists > 0)
+    badges.push({ short: "A", icon: CircleDot, accent: "text-white" });
+  if (player.saves > 0)
+    badges.push({ short: "SV", icon: ShieldAlert, accent: "text-cyan-200" });
+  if (player.defends > 0)
+    badges.push({ short: "D", icon: ShieldAlert, accent: "text-emerald-200" });
+  if (player.successfulDribbles > 0)
+    badges.push({ short: "SD", icon: Redo2, accent: "text-violet-200" });
+  if (player.yellowCards > 0)
+    badges.push({
+      short: "YC",
+      icon: ShieldAlert,
+      accent: "text-yellow-200",
+      src: "/yellow-card.png",
+    });
+  if (player.redCards > 0)
+    badges.push({
+      short: "RC",
+      icon: ShieldAlert,
+      accent: "text-red-200",
+      src: "/red.png",
+    });
+  if (player.injuries > 0)
+    badges.push({
+      short: "I",
+      icon: HeartCrack,
+      accent: "text-white",
+      src: "/injury.png",
+    });
+  if (player.fouls > 0)
+    badges.push({
+      short: "F",
+      icon: Redo2,
+      accent: "text-white",
+      src: "/foul.png",
+    });
+  return badges;
 }
 
 function MatchStats({ match, players }) {
@@ -1158,6 +1414,9 @@ function ResultLog({ events }) {
   // Only show important event types in the log and color-code them
   const IMPORTANT = new Set([
     "goal",
+    "save",
+    "defend",
+    "successful_dribble",
     "score_correction",
     "yellow_card",
     "red_card",
@@ -1169,6 +1428,9 @@ function ResultLog({ events }) {
 
   const EVENT_CLASSES = {
     goal: "bg-gradient-to-r from-emerald-600 to-emerald-500 text-white",
+    save: "bg-cyan-500 text-white",
+    defend: "bg-emerald-700 text-white",
+    successful_dribble: "bg-violet-600 text-white",
     score_correction: "bg-yellow-400 text-black",
     yellow_card: "bg-yellow-300 text-black",
     red_card: "bg-red-500 text-white",
@@ -1186,6 +1448,9 @@ function ResultLog({ events }) {
   function getCompactLabel(event) {
     const prefix = {
       goal: "⚽",
+      save: "🧤",
+      defend: "🛡",
+      successful_dribble: "↗",
       score_correction: "↺",
       yellow_card: "🟨",
       red_card: "🟥",
@@ -1198,7 +1463,16 @@ function ResultLog({ events }) {
     if (event.type === "goal") {
       return `${prefix} ${event.scorerName ? `@${event.scorerName}` : "Goal"}`;
     }
-    if (["yellow_card", "red_card", "injury"].includes(event.type)) {
+    if (
+      [
+        "yellow_card",
+        "red_card",
+        "injury",
+        "save",
+        "defend",
+        "successful_dribble",
+      ].includes(event.type)
+    ) {
       return `${prefix} ${event.scorerName ? `@${event.scorerName}` : "player"}`;
     }
     return `${prefix} ${event.label}`;
@@ -1320,7 +1594,12 @@ function ResultTeamSheet({ title, players, align = "left" }) {
             className={`flex items-center justify-between gap-3 rounded-xl bg-card p-3 ${
               align === "right" ? "flex-row-reverse text-right" : ""
             }`}>
-            <p className="min-w-0 truncate text-sm font-bold">@{player.name}</p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-bold">{player.name}</p>
+              <p className="truncate text-xs font-semibold text-muted-foreground">
+                @{player.username || "player"}
+              </p>
+            </div>
             <div className="flex shrink-0 gap-1">
               <ResultBadge label="G" value={player.goals} tone="goal" />
               <ResultBadge label="A" value={player.assists} tone="assist" />
@@ -1433,7 +1712,7 @@ function GoalDrawer({
             <p className="text-sm font-semibold text-primary">Live scoring</p>
             <h2 className="text-xl font-bold">Record Goal</h2>
           </div>
-          <button type="button" onClick={onClose}>
+          <button type="button" title="Close goal drawer" onClick={onClose}>
             <X className="size-5" />
           </button>
         </div>
@@ -1500,7 +1779,7 @@ function GoalDrawer({
               <SelectContent>
                 {teamPlayers.map((player) => (
                   <SelectItem key={player.bookingId} value={player.bookingId}>
-                    @{player.username || player.name}
+                    {player.name} @{player.username || "player"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1523,7 +1802,7 @@ function GoalDrawer({
                 <SelectItem value="none">No assist</SelectItem>
                 {assistPlayers.map((player) => (
                   <SelectItem key={player.bookingId} value={player.bookingId}>
-                    @{player.username || player.name}
+                    {player.name} @{player.username || "player"}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -1543,7 +1822,7 @@ function GoalDrawer({
 }
 
 function PlayerActionDrawer({ action, loading, onClose, onGoal, onEvent }) {
-  const playerName = action.player.username || action.player.name;
+  const playerName = action.player.name;
   const eventLoading = loading.startsWith("player-event-");
 
   return (
@@ -1557,50 +1836,123 @@ function PlayerActionDrawer({ action, loading, onClose, onGoal, onEvent }) {
       <section className="relative z-10 w-full rounded-t-3xl bg-card p-5 shadow-2xl animate-[goal-drawer-in_240ms_ease-out] sm:mx-auto sm:mb-4 sm:max-w-lg sm:rounded-3xl">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-primary">@{playerName}</p>
+            <p className="text-sm font-semibold text-primary">{playerName}</p>
             <h2 className="text-xl font-bold">Player action</h2>
           </div>
-          <button type="button" onClick={onClose}>
+          <button type="button" title="Close player actions" onClick={onClose}>
             <X className="size-5" />
           </button>
         </div>
 
-        <div className="mt-5 grid gap-2">
-          <Button
-            type="button"
-            className="w-full bg-violet-600 text-white hover:bg-violet-500"
-            disabled={Boolean(loading)}
-            onClick={onGoal}>
-            Record goal
-          </Button>
-          <div className="grid grid-cols-2 gap-2">
+        <div className="mt-5 grid gap-4">
+          <div className="grid grid-cols-5 gap-2 rounded-3xl bg-secondary/70 p-3 ring-1 ring-border">
             <Button
               type="button"
-              variant="outline"
-              disabled={eventLoading}
-              onClick={() => onEvent("foul")}>
-              Foul
+              variant="ghost"
+              className="flex h-20 flex-col rounded-2xl border border-border bg-card px-2 py-2 shadow-[0_10px_24px_rgba(17,24,39,0.08)] hover:-translate-y-0.5 hover:bg-secondary"
+              disabled={Boolean(loading)}
+              onClick={onGoal}
+              title="Goal">
+              <Image
+                src="/Ballicon.png"
+                alt="Goal"
+                width={20}
+                height={20}
+                className="size-5 object-contain"
+              />
+              <span className="text-[0.65rem] font-bold leading-none">Goal</span>
             </Button>
             <Button
               type="button"
               variant="outline"
+              className="flex h-20 flex-col rounded-2xl px-2 py-2"
               disabled={eventLoading}
-              onClick={() => onEvent("injury")}>
-              Injured
+              onClick={() => onEvent("foul")}
+              title="Foul">
+              <Image
+                src="/foul.png"
+                alt="Foul"
+                width={24}
+                height={24}
+                className="size-6 object-contain"
+              />
+              <span className="text-[0.65rem] font-bold leading-none">Foul</span>
             </Button>
             <Button
               type="button"
               variant="outline"
+              className="flex h-20 flex-col rounded-2xl px-2 py-2"
               disabled={eventLoading}
-              onClick={() => onEvent("yellow_card")}>
-              Yellow card
+              onClick={() => onEvent("injury")}
+              title="Injury">
+              <Image
+                src="/injury.png"
+                alt="Injury"
+                width={24}
+                height={24}
+                className="size-6 object-contain"
+              />
+              <span className="text-[0.65rem] font-bold leading-none">Injury</span>
             </Button>
             <Button
               type="button"
               variant="outline"
+              className="flex h-20 flex-col rounded-2xl px-2 py-2"
               disabled={eventLoading}
-              onClick={() => onEvent("red_card")}>
-              Red card
+              onClick={() => onEvent("yellow_card")}
+              title="Yellow Card">
+              <Image
+                src="/yellow-card.png"
+                alt="Yellow Card"
+                width={24}
+                height={24}
+                className="size-6 object-contain"
+              />
+              <span className="text-[0.65rem] font-bold leading-none text-center">
+                Yellow
+              </span>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex h-20 flex-col rounded-2xl px-2 py-2"
+              disabled={eventLoading}
+              onClick={() => onEvent("red_card")}
+              title="Red Card">
+              <Image
+                src="/red.png"
+                alt="Red Card"
+                width={24}
+                height={24}
+                className="size-6 object-contain"
+              />
+              <span className="text-[0.65rem] font-bold leading-none">Red</span>
+            </Button>
+          </div>
+          <div className="flex flex-wrap gap-3 rounded-3xl bg-secondary/70 p-3 ring-1 ring-border">
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-12 rounded-2xl border border-border bg-card px-4 text-sm font-black uppercase tracking-[0.12em] shadow-[0_10px_24px_rgba(17,24,39,0.08)] hover:-translate-y-0.5 hover:bg-secondary"
+              disabled={eventLoading}
+              onClick={() => onEvent("save")}>
+              Save
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-12 rounded-2xl border border-border bg-card px-4 text-sm font-black uppercase tracking-[0.12em] shadow-[0_10px_24px_rgba(17,24,39,0.08)] hover:-translate-y-0.5 hover:bg-secondary"
+              disabled={eventLoading}
+              onClick={() => onEvent("defend")}>
+              Defend
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              className="h-12 rounded-2xl border border-border bg-card px-4 text-sm font-black uppercase tracking-[0.12em] shadow-[0_10px_24px_rgba(17,24,39,0.08)] hover:-translate-y-0.5 hover:bg-secondary"
+              disabled={eventLoading}
+              onClick={() => onEvent("successful_dribble")}>
+              Success dribble
             </Button>
           </div>
         </div>
@@ -1612,6 +1964,8 @@ function PlayerActionDrawer({ action, loading, onClose, onGoal, onEvent }) {
 function ManageDrawer({
   match,
   players,
+  assignments,
+  setAssignments,
   loading,
   isCompleted,
   teamNameDraft,
@@ -1623,6 +1977,7 @@ function ManageDrawer({
   playerLookup,
   onClose,
   onSaveTeamNames,
+  onSaveLineup,
   onAddPlayer,
   onRemovePlayer,
 }) {
@@ -1642,7 +1997,7 @@ function ManageDrawer({
             <p className="text-sm font-semibold text-primary">Match setup</p>
             <h2 className="text-xl font-bold">Manage</h2>
           </div>
-          <button type="button" onClick={onClose}>
+          <button type="button" title="Close match management" onClick={onClose}>
             <X className="size-5" />
           </button>
         </div>
@@ -1692,7 +2047,6 @@ function ManageDrawer({
                 type="button"
                 variant="outline"
                 size="sm"
-                disabled={isCompleted}
                 onClick={() => {
                   setShowAddPlayer((visible) => !visible);
                   setOfflinePlayer({ name: "", phone: "" });
@@ -1750,7 +2104,6 @@ function ManageDrawer({
                   type="button"
                   disabled={
                     addingPlayer ||
-                    isCompleted ||
                     offlinePlayer.phone.length < 10 ||
                     playerLookup.status === "checking" ||
                     playerLookup.alreadyAdded ||
@@ -1773,8 +2126,9 @@ function ManageDrawer({
                   key={player.bookingId}
                   className="flex items-center justify-between gap-3 rounded-2xl bg-secondary p-3">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold">
-                      @{player.username || player.name}
+                    <p className="truncate text-sm font-bold">{player.name}</p>
+                    <p className="truncate text-xs font-semibold text-muted-foreground">
+                      @{player.username || "player"}
                     </p>
                     <p className="text-xs font-semibold text-muted-foreground">
                       {player.team === "home" ? match.homeTeam : match.awayTeam}
@@ -1784,9 +2138,7 @@ function ManageDrawer({
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={
-                      isCompleted || loading === `remove-${player.bookingId}`
-                    }
+                    disabled={loading === `remove-${player.bookingId}`}
                     onClick={() => onRemovePlayer(player.bookingId)}>
                     {loading === `remove-${player.bookingId}`
                       ? "Removing..."
@@ -1799,6 +2151,56 @@ function ManageDrawer({
                   No players in this match.
                 </p>
               )}
+            </div>
+
+            <div className="grid gap-3 rounded-2xl bg-secondary p-3">
+              <div>
+                <p className="text-sm font-bold">Shuffle teams</p>
+                <p className="text-xs text-muted-foreground">
+                  Move players between sides after the match if the lineup was
+                  recorded incorrectly.
+                </p>
+              </div>
+              <div className="grid gap-2">
+                {players.map((player) => (
+                  <div
+                    key={`${player.bookingId}-swap`}
+                    className="flex items-center justify-between gap-3 rounded-xl bg-card p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold">
+                        {player.name}
+                      </p>
+                      <p className="truncate text-xs font-semibold text-muted-foreground">
+                        @{player.username || "player"} ·{" "}
+                        {assignments?.[player.bookingId] === "home"
+                          ? match.homeTeam
+                          : match.awayTeam}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setAssignments((current) => ({
+                          ...current,
+                          [player.bookingId]:
+                            current[player.bookingId] === "home"
+                              ? "away"
+                              : "home",
+                        }))
+                      }>
+                      Switch side
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                type="button"
+                disabled={loading === "lineup-save"}
+                onClick={onSaveLineup}>
+                {loading === "lineup-save" ? "Saving..." : "Save lineup"}
+              </Button>
             </div>
           </section>
         </div>
@@ -1813,6 +2215,7 @@ function ToolButton({ icon: Icon, label, onClick, disabled }) {
       type="button"
       disabled={disabled}
       onClick={onClick}
+      title={label}
       className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[0.65rem] font-bold text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-40">
       <Icon className="size-4" />
       {label}
@@ -1869,14 +2272,19 @@ function getMatchStats(match, players) {
       player.bookingId,
       {
         key: player.bookingId,
-        name: player.username || player.name,
+        name: player.name,
+        username: player.username || null,
         team: player.team,
         teamName: player.team === "home" ? match.homeTeam : match.awayTeam,
         goals: 0,
         assists: 0,
+        saves: 0,
+        defends: 0,
+        successfulDribbles: 0,
         yellowCards: 0,
         redCards: 0,
         injuries: 0,
+        fouls: 0,
       },
     ]),
   );
@@ -1898,13 +2306,18 @@ function getMatchStats(match, players) {
       playerStats.set(key, {
         key,
         name: fallbackName,
+        username: null,
         team,
         teamName: team === "home" ? match.homeTeam : match.awayTeam,
         goals: 0,
         assists: 0,
+        saves: 0,
+        defends: 0,
+        successfulDribbles: 0,
         yellowCards: 0,
         redCards: 0,
         injuries: 0,
+        fouls: 0,
       });
     }
     return playerStats.get(key);
@@ -1962,6 +2375,28 @@ function getMatchStats(match, players) {
     .filter((event) => event.type === "foul")
     .forEach((event) => {
       if (event.team) teamFouls[event.team] = (teamFouls[event.team] || 0) + 1;
+      const player = getEventPlayer(
+        event.scorerBookingId,
+        event.scorerName,
+        event.team,
+      );
+      if (player) player.fouls += 1;
+    });
+
+  events
+    .filter((event) =>
+      ["save", "defend", "successful_dribble"].includes(event.type),
+    )
+    .forEach((event) => {
+      const player = getEventPlayer(
+        event.scorerBookingId,
+        event.scorerName,
+        event.team,
+      );
+      if (!player) return;
+      if (event.type === "save") player.saves += 1;
+      if (event.type === "defend") player.defends += 1;
+      if (event.type === "successful_dribble") player.successfulDribbles += 1;
     });
 
   events

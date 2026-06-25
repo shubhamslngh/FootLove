@@ -71,6 +71,7 @@ export function PlayerCardDisplay({ user, stats, className }) {
           <p className="text-sm font-bold text-slate-600 dark:text-white/75">
             @{user.username || "user"}
           </p>
+      
         </div>
 
         <div className="grid grid-cols-6 gap-2 text-center">

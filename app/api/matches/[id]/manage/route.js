@@ -14,6 +14,7 @@ export async function PATCH(request, { params }) {
   const body = await parseJson(request);
   const homeTeam = String(body?.homeTeam || "").trim();
   const awayTeam = String(body?.awayTeam || "").trim();
+  const assignments = Array.isArray(body?.assignments) ? body.assignments : [];
   if (!homeTeam || !awayTeam) {
     return fail("Both team names are required");
   }
@@ -35,6 +36,21 @@ export async function PATCH(request, { params }) {
 
     match.homeTeam = homeTeam;
     match.awayTeam = awayTeam;
+    if (assignments.length) {
+      const confirmedBookings = db.bookings.filter(
+        (booking) =>
+          booking.matchId === id &&
+          ["pending", "confirmed"].includes(booking.status),
+      );
+      const bookingById = new Map(
+        confirmedBookings.map((booking) => [booking.id, booking]),
+      );
+      for (const assignment of assignments) {
+        const booking = bookingById.get(String(assignment.bookingId || ""));
+        if (!booking || !["home", "away"].includes(assignment.team)) continue;
+        booking.team = assignment.team;
+      }
+    }
     match.updatedAt = new Date().toISOString();
     result = { match };
     return db;

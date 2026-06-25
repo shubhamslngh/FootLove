@@ -57,7 +57,7 @@ export async function POST(request, { params }) {
       };
       return db;
     }
-    if (!["open", "live"].includes(match.status)) {
+    if (!["open", "live", "completed"].includes(match.status)) {
       result = {
         error: "Players cannot be added to this match now",
         status: 409,

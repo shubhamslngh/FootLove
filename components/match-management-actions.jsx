@@ -17,6 +17,7 @@ import {
 export function MatchManagementActions({ match, hostBooking = null }) {
   const router = useRouter();
   const [deleting, setDeleting] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [joining, setJoining] = useState(false);
   const [slotRole, setSlotRole] = useState(
     match.slotRoles?.[0] || "Any role",
@@ -43,14 +44,6 @@ export function MatchManagementActions({ match, hostBooking = null }) {
   }
 
   async function deleteMatch() {
-    if (
-      !window.confirm(
-        `Delete "${match.title}"? This will also remove its bookings.`,
-      )
-    ) {
-      return;
-    }
-
     setMessage("");
     setDeleting(true);
     const response = await fetch(`/api/matches/${match.id}`, {
@@ -117,7 +110,7 @@ export function MatchManagementActions({ match, hostBooking = null }) {
           size="sm"
           className="text-red-600 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-950/30"
           disabled={deleting}
-          onClick={deleteMatch}>
+          onClick={() => setConfirmingDelete(true)}>
           <Trash2 />
           {deleting ? "Deleting..." : "Delete match"}
         </Button>
@@ -126,6 +119,43 @@ export function MatchManagementActions({ match, hostBooking = null }) {
         <p className="text-xs font-medium text-red-600 dark:text-red-400">
           {message}
         </p>
+      )}
+      {confirmingDelete && (
+        <div className="fixed inset-0 z-[90] flex items-end bg-black/45 sm:items-center sm:justify-center">
+          <button
+            type="button"
+            className="absolute inset-0"
+            aria-label="Close delete confirmation"
+            onClick={() => setConfirmingDelete(false)}
+          />
+          <section className="relative z-10 w-full rounded-t-3xl bg-card p-5 shadow-2xl ring-1 ring-border sm:max-w-md sm:rounded-3xl">
+            <p className="text-sm font-semibold text-red-600 dark:text-red-400">
+              Delete match
+            </p>
+            <h3 className="mt-1 text-lg font-bold">{match.title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              This will permanently remove the match and its bookings.
+            </p>
+            <div className="mt-5 grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={deleting}
+                onClick={() => setConfirmingDelete(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="bg-red-600 text-white hover:bg-red-700"
+                disabled={deleting}
+                onClick={deleteMatch}
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   );
