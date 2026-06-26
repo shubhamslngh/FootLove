@@ -24,7 +24,7 @@ export function LoginScreen() {
                   alt="SoccerSesh logo"
                   width={144}
                   height={80}
-                  className="object-contain"
+                  className="h-auto w-auto object-contain"
                   priority
                 />
               </div>

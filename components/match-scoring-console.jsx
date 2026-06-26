@@ -72,6 +72,7 @@ export function MatchScoringConsole({
   const [playerAction, setPlayerAction] = useState(null);
   const [showManage, setShowManage] = useState(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
+  const [playerSearch, setPlayerSearch] = useState("");
   const [teamNameDraft, setTeamNameDraft] = useState({
     homeTeam: match.homeTeam,
     awayTeam: match.awayTeam,
@@ -80,6 +81,7 @@ export function MatchScoringConsole({
   const [playerLookup, setPlayerLookup] = useState({
     status: "idle",
     player: null,
+    matches: [],
     alreadyAdded: false,
     message: "",
   });
@@ -119,10 +121,24 @@ export function MatchScoringConsole({
   }, [assignments]);
 
   useEffect(() => {
-    if (!showAddPlayer || offlinePlayer.phone.length !== 10) {
+    if (!showAddPlayer) {
       setPlayerLookup({
         status: "idle",
         player: null,
+        matches: [],
+        alreadyAdded: false,
+        message: "",
+      });
+      return undefined;
+    }
+
+    const trimmedQuery = playerSearch.trim();
+    const normalizedPhone = offlinePlayer.phone.trim();
+    if (!trimmedQuery && normalizedPhone.length !== 10) {
+      setPlayerLookup({
+        status: "idle",
+        player: null,
+        matches: [],
         alreadyAdded: false,
         message: "",
       });
@@ -134,14 +150,16 @@ export function MatchScoringConsole({
       setPlayerLookup({
         status: "checking",
         player: null,
+        matches: [],
         alreadyAdded: false,
         message: "",
       });
       try {
+        const params = new URLSearchParams();
+        if (trimmedQuery) params.set("q", trimmedQuery);
+        else params.set("phone", normalizedPhone);
         const response = await fetch(
-          `/api/matches/${match.id}/offline-player?phone=${encodeURIComponent(
-            offlinePlayer.phone,
-          )}`,
+          `/api/matches/${match.id}/offline-player?${params.toString()}`,
           { signal: controller.signal },
         );
         const result = await response.json();
@@ -149,14 +167,29 @@ export function MatchScoringConsole({
           setPlayerLookup({
             status: "error",
             player: null,
+            matches: [],
             alreadyAdded: false,
             message: result?.error?.message || "Could not look up player",
+          });
+          return;
+        }
+        if (trimmedQuery) {
+          const matches = Array.isArray(result.data?.matches)
+            ? result.data.matches
+            : [];
+          setPlayerLookup({
+            status: matches.length ? "results" : "not-found",
+            player: null,
+            matches,
+            alreadyAdded: false,
+            message: "",
           });
           return;
         }
         setPlayerLookup({
           status: result.data.found ? "found" : "not-found",
           player: result.data.player || null,
+          matches: result.data.found && result.data.player ? [result.data.player] : [],
           alreadyAdded: Boolean(result.data.alreadyAdded),
           message: "",
         });
@@ -165,6 +198,7 @@ export function MatchScoringConsole({
         setPlayerLookup({
           status: "error",
           player: null,
+          matches: [],
           alreadyAdded: false,
           message: "Could not look up player",
         });
@@ -175,7 +209,7 @@ export function MatchScoringConsole({
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [showAddPlayer, offlinePlayer.phone, match.id]);
+  }, [showAddPlayer, offlinePlayer.phone, playerSearch, match.id]);
 
   useEffect(() => {
     setElapsed(getElapsed(liveMatch));
@@ -301,10 +335,12 @@ export function MatchScoringConsole({
       [player.bookingId]: player.team,
     }));
     setShowAddPlayer(false);
+    setPlayerSearch("");
     setOfflinePlayer({ name: "", phone: "" });
     setPlayerLookup({
       status: "idle",
       player: null,
+      matches: [],
       alreadyAdded: false,
       message: "",
     });
@@ -450,9 +486,12 @@ export function MatchScoringConsole({
           onRandomize={randomizeAssignments}
           showAddPlayer={showAddPlayer}
           setShowAddPlayer={setShowAddPlayer}
+          playerSearch={playerSearch}
+          setPlayerSearch={setPlayerSearch}
           offlinePlayer={offlinePlayer}
           setOfflinePlayer={setOfflinePlayer}
           playerLookup={playerLookup}
+          setPlayerLookup={setPlayerLookup}
           onAddOfflinePlayer={addOfflinePlayer}
           addingOfflinePlayer={loading === "offline-player"}
         />
@@ -504,9 +543,12 @@ export function MatchScoringConsole({
             setTeamNameDraft={setTeamNameDraft}
             showAddPlayer={false}
             setShowAddPlayer={setShowAddPlayer}
+            playerSearch={playerSearch}
+            setPlayerSearch={setPlayerSearch}
             offlinePlayer={offlinePlayer}
             setOfflinePlayer={setOfflinePlayer}
             playerLookup={playerLookup}
+            setPlayerLookup={setPlayerLookup}
             onClose={() => setShowManage(false)}
             onSaveTeamNames={updateTeamNames}
             onSaveLineup={saveLineupChanges}
@@ -746,23 +788,26 @@ export function MatchScoringConsole({
         />
       )}
       {showManage && (
-        <ManageDrawer
-          match={liveMatch}
-          players={activePlayers}
-          assignments={assignments}
-          setAssignments={setAssignments}
-          loading={loading}
-          isCompleted={isCompleted}
-          teamNameDraft={teamNameDraft}
-          setTeamNameDraft={setTeamNameDraft}
-          showAddPlayer={showAddPlayer}
-          setShowAddPlayer={setShowAddPlayer}
-          offlinePlayer={offlinePlayer}
-          setOfflinePlayer={setOfflinePlayer}
-          playerLookup={playerLookup}
-          onClose={() => setShowManage(false)}
-          onSaveTeamNames={updateTeamNames}
-          onSaveLineup={saveLineupChanges}
+          <ManageDrawer
+            match={liveMatch}
+            players={activePlayers}
+            assignments={assignments}
+            setAssignments={setAssignments}
+            loading={loading}
+            isCompleted={isCompleted}
+            teamNameDraft={teamNameDraft}
+            setTeamNameDraft={setTeamNameDraft}
+            showAddPlayer={showAddPlayer}
+            setShowAddPlayer={setShowAddPlayer}
+            playerSearch={playerSearch}
+            setPlayerSearch={setPlayerSearch}
+            offlinePlayer={offlinePlayer}
+            setOfflinePlayer={setOfflinePlayer}
+            playerLookup={playerLookup}
+            setPlayerLookup={setPlayerLookup}
+            onClose={() => setShowManage(false)}
+            onSaveTeamNames={updateTeamNames}
+            onSaveLineup={saveLineupChanges}
           onAddPlayer={addOfflinePlayer}
           onRemovePlayer={removePlayer}
         />
@@ -780,9 +825,12 @@ function TeamAssignment({
   onRandomize,
   showAddPlayer,
   setShowAddPlayer,
+  playerSearch,
+  setPlayerSearch,
   offlinePlayer,
   setOfflinePlayer,
   playerLookup,
+  setPlayerLookup,
   onAddOfflinePlayer,
   addingOfflinePlayer,
 }) {
@@ -815,6 +863,7 @@ function TeamAssignment({
             size="sm"
             onClick={() => {
               setShowAddPlayer((visible) => !visible);
+              setPlayerSearch("");
               setOfflinePlayer({ name: "", phone: "" });
             }}>
             <Plus /> {showAddPlayer ? "Close" : "Add player"}
@@ -832,6 +881,52 @@ function TeamAssignment({
 
       {showAddPlayer && (
         <div className="grid gap-3 border-b border-border p-4">
+          <div className="grid gap-3">
+            <Input
+              value={playerSearch}
+              onChange={(event) => setPlayerSearch(event.target.value)}
+              placeholder="Search by player name or mobile"
+            />
+          </div>
+
+          {(playerLookup.status === "results" || playerLookup.status === "found") &&
+            playerLookup.matches.length > 0 && (
+              <div className="grid gap-2">
+                {playerLookup.matches.map((candidate) => (
+                  <button
+                    key={`${candidate.phone}-${candidate.username || candidate.name}`}
+                    type="button"
+                    className="flex w-full items-center justify-between gap-3 rounded-2xl bg-secondary p-3 text-left transition hover:bg-secondary/80"
+                    onClick={() => {
+                      setPlayerSearch(candidate.name || candidate.username || "");
+                      setOfflinePlayer({
+                        name: candidate.guest ? candidate.name || "" : "",
+                        phone: String(candidate.phone || "").replace(/\D/g, "").slice(-10),
+                      });
+                      setPlayerLookup({
+                        status: "found",
+                        player: candidate,
+                        matches: [candidate],
+                        alreadyAdded: Boolean(candidate.alreadyAdded),
+                        message: "",
+                      });
+                    }}>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-bold">
+                        {candidate.name}
+                      </p>
+                      <p className="truncate text-xs font-semibold text-muted-foreground">
+                        @{candidate.username || "player"} · {candidate.phone}
+                      </p>
+                    </div>
+                    <span className="text-xs font-bold text-muted-foreground">
+                      {candidate.alreadyAdded ? "Added" : candidate.guest ? "Guest" : "Registered"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
             <Input
               value={offlinePlayer.phone}
@@ -867,7 +962,7 @@ function TeamAssignment({
 
           {playerLookup.status === "checking" && (
             <p className="text-sm font-semibold text-muted-foreground">
-              Checking registered players...
+              Searching players...
             </p>
           )}
 
@@ -894,8 +989,8 @@ function TeamAssignment({
                   name: event.target.value,
                 }))
               }
-              placeholder="Offline player name"
-            />
+                placeholder="Offline player name"
+              />
           )}
 
           {playerLookup.status === "error" && (
@@ -1972,9 +2067,12 @@ function ManageDrawer({
   setTeamNameDraft,
   showAddPlayer,
   setShowAddPlayer,
+  playerSearch,
+  setPlayerSearch,
   offlinePlayer,
   setOfflinePlayer,
   playerLookup,
+  setPlayerLookup,
   onClose,
   onSaveTeamNames,
   onSaveLineup,
@@ -2049,6 +2147,7 @@ function ManageDrawer({
                 size="sm"
                 onClick={() => {
                   setShowAddPlayer((visible) => !visible);
+                  setPlayerSearch("");
                   setOfflinePlayer({ name: "", phone: "" });
                 }}>
                 <Plus /> {showAddPlayer ? "Close" : "Add player"}
@@ -2057,6 +2156,50 @@ function ManageDrawer({
 
             {showAddPlayer && (
               <div className="grid gap-3 rounded-2xl bg-secondary p-3">
+                <Input
+                  value={playerSearch}
+                  onChange={(event) => setPlayerSearch(event.target.value)}
+                  placeholder="Search by player name or mobile"
+                />
+                {(playerLookup.status === "results" || playerLookup.status === "found") &&
+                  playerLookup.matches.length > 0 && (
+                    <div className="grid gap-2">
+                      {playerLookup.matches.map((candidate) => (
+                        <button
+                          key={`${candidate.phone}-${candidate.username || candidate.name}`}
+                          type="button"
+                          className="flex w-full items-center justify-between gap-3 rounded-2xl bg-background p-3 text-left transition hover:bg-background/80"
+                          onClick={() => {
+                            setPlayerSearch(candidate.name || candidate.username || "");
+                            setOfflinePlayer({
+                              name: candidate.guest ? candidate.name || "" : "",
+                              phone: String(candidate.phone || "").replace(/\D/g, "").slice(-10),
+                            });
+                            setPlayerLookup({
+                              status: "found",
+                              player: candidate,
+                              matches: [candidate],
+                              alreadyAdded: Boolean(candidate.alreadyAdded),
+                              message: "",
+                            });
+                          }}>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-bold">{candidate.name}</p>
+                            <p className="truncate text-xs font-semibold text-muted-foreground">
+                              @{candidate.username || "player"} · {candidate.phone}
+                            </p>
+                          </div>
+                          <span className="text-xs font-bold text-muted-foreground">
+                            {candidate.alreadyAdded
+                              ? "Added"
+                              : candidate.guest
+                                ? "Guest"
+                                : "Registered"}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 <Input
                   value={offlinePlayer.phone}
                   onChange={(event) =>
@@ -2092,7 +2235,7 @@ function ManageDrawer({
                 )}
                 {playerLookup.status === "checking" && (
                   <p className="text-sm font-semibold text-muted-foreground">
-                    Checking registered players...
+                    Searching players...
                   </p>
                 )}
                 {playerLookup.status === "error" && (

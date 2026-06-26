@@ -179,16 +179,88 @@ export async function GET(request, { params }) {
   if (error) return error;
 
   const { searchParams } = new URL(request.url);
+  const query = String(searchParams.get("q") || "").trim();
   const phone = normalizeIndianPhone(searchParams.get("phone"));
-  if (!isValidIndianPhone(phone)) {
-    return fail("Enter a valid 10-digit mobile number");
-  }
 
   const db = await readDb();
   const match = db.matches.find((candidate) => candidate.id === id);
   if (!match) return fail("Match not found", 404);
   if (!canControlMatch(user, match)) {
     return fail("Only this match host can look up players", 403);
+  }
+
+  if (query) {
+    const normalizedQuery = query.toLowerCase();
+    const digitQuery = normalizeIndianPhone(query);
+    const matches = [];
+    const seen = new Set();
+
+    for (const candidate of db.users) {
+      const phoneMatches =
+        digitQuery.length >= 3 &&
+        normalizeIndianPhone(candidate.phone).includes(digitQuery);
+      const nameMatches =
+        normalizedQuery.length >= 2 &&
+        [candidate.name, candidate.username]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(normalizedQuery));
+      if (!phoneMatches && !nameMatches) continue;
+
+      const alreadyAdded = db.bookings.some(
+        (booking) =>
+          booking.matchId === match.id &&
+          booking.userId === candidate.id &&
+          ["pending", "confirmed"].includes(booking.status),
+      );
+      const publicPlayer = publicUser(candidate);
+      const key = `user:${candidate.id}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      matches.push({
+        ...publicPlayer,
+        guest: false,
+        alreadyAdded,
+      });
+    }
+
+    for (const booking of [...db.bookings].reverse()) {
+      const guestName = String(booking.guestName || "").trim();
+      const guestPhone = normalizeIndianPhone(booking.guestPhone);
+      const phoneMatches =
+        digitQuery.length >= 3 && guestPhone.includes(digitQuery);
+      const nameMatches =
+        normalizedQuery.length >= 2 &&
+        [guestName, booking.guestUsername]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(normalizedQuery));
+      if (!guestName || (!phoneMatches && !nameMatches)) continue;
+
+      const key = `guest:${guestPhone}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const existingBooking = db.bookings.find(
+        (candidate) =>
+          candidate.matchId === match.id &&
+          normalizeIndianPhone(candidate.guestPhone) === guestPhone &&
+          ["pending", "confirmed"].includes(candidate.status),
+      );
+
+      matches.push({
+        name: guestName,
+        username: booking.guestUsername || null,
+        phone: guestPhone,
+        role: "guest",
+        guest: true,
+        alreadyAdded: Boolean(existingBooking),
+      });
+    }
+
+    return ok({ matches: matches.slice(0, 8) });
+  }
+
+  if (!isValidIndianPhone(phone)) {
+    return fail("Enter a valid 10-digit mobile number");
   }
 
   const registeredPlayer = db.users.find(

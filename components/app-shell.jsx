@@ -30,7 +30,7 @@ export function AppShell({ children, user }) {
                               alt="SoccerSesh logo"
                               width={144}
                               height={40}
-                              className="object-contain"
+                              className="h-auto w-auto object-contain"
                               priority
                             />
                           </div>
