@@ -24,7 +24,6 @@ export function AppShell({ children, user }) {
   const canHost = canHostMatch(user);
   const pathname = usePathname();
   const [isCondensed, setIsCondensed] = useState(false);
-  const isTightCondensed = isCondensed && !canHost;
 
   useEffect(() => {
     function onScroll() {
@@ -37,31 +36,21 @@ export function AppShell({ children, user }) {
   }, []);
 
   return (
-    <main className="min-h-screen bg-background pb-20">
+    <main className="min-h-screen  bg-background pb-20">
       <header
         className={`sticky top-0 z-40 bg-background/10 backdrop-blur-md transition-all duration-300 ${
           isCondensed ? "bg-background/70" : ""
         }`}>
-        <div
-          className={`mx-auto flex max-w-6xl items-center justify-between px-4 transition-all duration-300 ${
-            isTightCondensed ? "py-1" : isCondensed ? "py-1.5" : "py-2"
-          }`}>
+        <div className="mx-auto flex min-h-16 max-w-6xl items-center justify-between px-4 py-2">
           <Link href="/dashboard" className="flex items-center gap-2 leading-tight">
-            <div
-              className={`flex origin-left items-center justify-center overflow-hidden rounded-2xl transition-all duration-300 ${
-                isTightCondensed ? "w-32" : "w-36"
-              }`}>
+            <div className="flex h-20 w-36 origin-left items-center justify-center overflow-hidden rounded-2xl">
               <Image
                 src="/Logo.png"
                 alt="SoccerSesh logo"
                 width={144}
                 height={40}
-                className={`h-auto w-full origin-left object-contain transition-transform duration-300 ${
-                  isTightCondensed
-                    ? "scale-[0.72]"
-                    : isCondensed
-                      ? "scale-[0.82]"
-                      : "scale-100"
+                className={`h-30 w-full origin-left object-contain transition-transform duration-300 ease-in-out ${
+                  isCondensed ? "scale-[0.86]" : "scale-100"
                 }`}
                 priority
               />
@@ -69,16 +58,12 @@ export function AppShell({ children, user }) {
           </Link>
           <div
             className={`flex items-center transition-all duration-300 ${
-              isTightCondensed ? "gap-1" : isCondensed ? "gap-1.5" : "gap-2"
+              isCondensed ? "gap-1.5" : "gap-2"
             }`}>
             {user && (
               <p
                 className={`hidden font-semibold text-muted-foreground transition-all duration-300 sm:block ${
-                  isTightCondensed
-                    ? "scale-90 text-xs opacity-75"
-                    : isCondensed
-                      ? "scale-95 text-sm opacity-85"
-                      : "scale-100 text-sm opacity-100"
+                  isCondensed ? "scale-95 text-sm opacity-85" : "scale-100 text-sm opacity-100"
                 }`}>
                 {user.name} ·{" "}
                 {user.role === ROLES.MANAGER && canHost
@@ -87,25 +72,19 @@ export function AppShell({ children, user }) {
               </p>
             )}
             {canHost && (
-              <Button asChild size="sm" className={isCondensed ? "h-8 px-3" : ""}>
+              <Button asChild size="sm" className="h-8 px-2 text-xs sm:h-9 sm:px-3 sm:text-sm">
                 <Link href="/host">Host</Link>
               </Button>
             )}
-            <div className={`transition-transform duration-300 ${isTightCondensed ? "scale-90" : ""}`}>
-              <ThemeToggle />
-            </div>
-            {user && (
-              <div className={`origin-right transition-transform duration-300 ${isTightCondensed ? "scale-90" : ""}`}>
-                <LogoutButton />
-              </div>
-            )}
+            <ThemeToggle />
+            {user && <LogoutButton />}
           </div>
         </div>
       </header>
       <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6">{children}</div>
       {user?.role === ROLES.PLAYER && <PlayerNotifications />}
       {user && (
-        <nav className="fixed  inset-x-3 bottom-3 z-50 rounded-xl bg- shadow-[0_18px_44px_rgba(17,24,39,0.18)] ring-1 ring-border backdrop-blur-xl lg:hidden">
+        <nav className="fixed  inset-x-3 bottom-3 z-50 rounded-xl bg-shadow-[0_18px_44px_rgba(17,24,39,0.18)] ring-1 ring-border backdrop-blur-xl lg:hidden">
           <div
             className={`grid ${
               canHost ? "grid-cols-5" : "grid-cols-4"

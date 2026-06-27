@@ -32,7 +32,7 @@ export function AdminDashboardTabs({
 
   useEffect(() => {
     function onScroll() {
-      setIsCondensed(window.scrollY > 90);
+      setIsCondensed(window.scrollY > 380);
     }
 
     onScroll();
@@ -42,11 +42,9 @@ export function AdminDashboardTabs({
 
   return (
     <>
-      <div className="sticky top-26 z-100 -mx-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:hidden">
+      <div className="sticky top-20 z-100 -mx-4 px-4 py-2 sm:-mx-6 sm:px-6 lg:hidden">
         <div
-          className={`grid w-full grid-cols-4 gap-1 bg-card shadow-[0_12px_30px_rgba(17,24,39,0.12)] ring-1 ring-border transition-all duration-300 ${
-            isCondensed ? "rounded-t-xl p-1" : "rounded-2xl p-1.5"
-          }`}
+          className={`grid w-full grid-cols-4 gap-1 rounded-t-2xl ease-in-out transition-transform rounded-b-2xl ${isCondensed ? "rounded-b-none" : ""}  bg-card p-1.5 shadow-[0_12px_30px_rgba(17,24,39,0.12)] ring-1 ring-border ring-t-border ring-b-0 transition-colors duration-300 `}
           role="tablist"
           aria-label="Admin management">
           {tabs.map((tab) => {
@@ -62,21 +60,20 @@ export function AdminDashboardTabs({
                 aria-selected={isActive}
                 aria-controls={`admin-panel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex min-w-0 items-center justify-center overflow-hidden px-1 font-bold transition-all duration-300 ${
-                  isCondensed
-                    ? "min-h-10 rounded-lg text-[0.58rem]"
-                    : "min-h-12 rounded-xl text-[0.65rem]"
-                } ${
+                className={`relative flex min-w-0 min-h-12 items-center justify-center overflow-hidden rounded-xl px-1 font-bold transition-[color,box-shadow,transform,background-color] duration-300 ${
                   isActive
                     ? "text-foreground shadow-[0_10px_20px_rgba(15,23,42,0.12)]"
                     : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                 }`}>
                 {isActive && (
-                  <span className="pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-br from-green-900/20 via-background/60 to-background/30 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.55),inset_-6px_-8px_14px_rgba(15,23,42,0.08),0_14px_25px_rgba(15,23,42,0.18)] ring-1 ring-white/40 backdrop-blur-xl dark:from-white/15 dark:via-background/45 dark:to-background/20 dark:ring-white/15" />
+                  <span className="pointer-events-none absolute inset-0 rounded-[inherit] bg-linear-to-br from-green-900/20 via-background/60 to-background/30 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.55),inset_-6px_-8px_14px_rgba(15,23,42,0.08),0_14px_25px_rgba(15,23,42,0.18)] ring-1 ring-white/40 backdrop-blur-xl dark:from-white/15 dark:via-background/45 dark:to-background/20 dark:ring-black/15" />
                 )}
-                <span className="relative z-10 flex min-w-0 flex-col items-center justify-center gap-1">
-                  <Icon className={isCondensed ? "size-3.5" : "size-4"} />
-                  <span className="truncate">{tab.label}</span>
+                <span
+                  className={`relative z-10 flex min-w-0 flex-col items-center justify-center gap-1 transition-transform duration-300 ${
+                    isCondensed ? "scale-[0.92] " : "scale-100"
+                  }`}>
+                  <Icon className="size-4" />
+                  <span className="truncate text-[0.65rem]">{tab.label}</span>
                 </span>
               </button>
             );

@@ -36,7 +36,7 @@ export default async function LeaderboardPage() {
   return (
     <AppShell user={user}>
       <div className="space-y-5">
-        <section className="rounded-[28px] bg-foreground p-5 text-background shadow-[0_18px_40px_rgba(17,24,39,0.18)]">
+        <section className="rounded-xl bg-foreground p-5 text-background shadow-[0_18px_40px_rgba(17,24,39,0.18)]">
           <Badge variant="secondary">App-wide rankings</Badge>
           <h1 className="mt-4 text-3xl font-bold tracking-normal">
             Player leaderboard
@@ -54,9 +54,9 @@ export default async function LeaderboardPage() {
         </section>
 
         <Tabs defaultValue="overall">
-          <TabsList className="w-full text-black justify-start overflow-x-auto">
+          <TabsList className="w-full text-black overflow-scroll justify-start rounded-lg bg-background/50 p-1 text-sm shadow-[0_8px_22px_rgba(17,24,39,0.08)] ring-1 ring-border">
             {categories.map(({ id, label, icon: Icon }) => (
-              <TabsTrigger key={id} value={id} className="gap-2 text-sm">
+              <TabsTrigger key={id} value={id} className="gap-2  text-sm">
                 <Icon className="size-4 text-fuchsia-800" />
                 {label}
               </TabsTrigger>
