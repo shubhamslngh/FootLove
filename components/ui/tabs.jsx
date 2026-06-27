@@ -3,24 +3,40 @@
 import * as React from "react";
 import * as TabsPrimitive from "@radix-ui/react-tabs";
 
+import {
+  tabListClassName,
+  tabTriggerActiveClassName,
+  tabTriggerBaseClassName,
+  tabTriggerOrbClassName,
+} from "@/lib/tab-styles";
 import { cn } from "@/lib/utils";
 
 const Tabs = TabsPrimitive.Root;
 
 const TabsList = React.forwardRef(({ className, ...props }, ref) => (
-  <TabsPrimitive.List ref={ref} className={cn("inline-flex min-h-12 items-center justify-center rounded-full bg-secondary p-1 shadow-inner", className)} {...props} />
+  <TabsPrimitive.List
+    ref={ref}
+    className={cn(tabListClassName, className)}
+    {...props}
+  />
 ));
 TabsList.displayName = TabsPrimitive.List.displayName;
 
-const TabsTrigger = React.forwardRef(({ className, ...props }, ref) => (
+const TabsTrigger = React.forwardRef(({ className, children, ...props }, ref) => (
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-full px-4 text-sm font-bold transition disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-[0_6px_18px_rgba(17,24,39,0.08)]",
+      tabTriggerBaseClassName,
+      tabTriggerActiveClassName,
+      tabTriggerOrbClassName,
       className
     )}
     {...props}
-  />
+  >
+    <span className="relative z-10 flex items-center justify-center gap-2">
+      {children}
+    </span>
+  </TabsPrimitive.Trigger>
 ));
 TabsTrigger.displayName = TabsPrimitive.Trigger.displayName;
 

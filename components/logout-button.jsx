@@ -15,7 +15,7 @@ export function LogoutButton() {
   }
 
   return (
-    <Button type="button" variant="ghost" size="sm" onClick={logout}>
+    <Button type="button" variant="destructive" size="sm" onClick={logout}>
       <LogOut /> Logout
     </Button>
   );

@@ -150,7 +150,7 @@ export default async function ProfilePage() {
           </CardContent>
         </Card>
 
-        <div className="flex justify-end">
+        <div className="flex  justify-end">
           <LogoutButton />
         </div>
       </div>

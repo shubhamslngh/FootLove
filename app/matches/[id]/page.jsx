@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Swords } from "lucide-react";
 
@@ -12,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCurrentUser } from "@/lib/server/auth";
 import { readDb, withVenue, publicUser } from "@/lib/server/db";
 import { canBookMatch, canManagePlatform } from "@/lib/server/roles";
+import { getTeamLogoUrl } from "@/lib/team-logos";
 import { formatDisplayDate } from "@/lib/utils";
 
 export async function generateMetadata({ params }) {
@@ -124,6 +126,8 @@ export default async function MatchDetailPage({ params }) {
         )?.name || booking.confirmedByUserId
       : null,
   }));
+  const homeLogo = getTeamLogoUrl(match.homeTeam);
+  const awayLogo = getTeamLogoUrl(match.awayTeam);
 
   return (
     <AppShell user={user}>
@@ -134,6 +138,45 @@ export default async function MatchDetailPage({ params }) {
             <h1 className="text-3xl font-bold tracking-normal">
               {match.title}
             </h1>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-bold">
+              <div className="flex items-center gap-2">
+                {homeLogo ? (
+                  <div className="relative grid size-12 place-items-center">
+                    <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/80 via-background/60 to-background/30 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.55),inset_-6px_-8px_14px_rgba(15,23,42,0.08),0_10px_18px_rgba(15,23,42,0.16)] ring-1 ring-white/40 backdrop-blur-xl dark:from-white/15 dark:via-background/45 dark:to-background/20 dark:ring-white/15" />
+                    <div className="relative z-10 grid w-8 place-items-center overflow-hidden rounded-full bg-transparent">
+                      <Image
+                        src={homeLogo}
+                        alt={`${match.homeTeam} logo`}
+                        width={48}
+                        height={48}
+                        className="h-auto w-8 object-contain"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+                <span>{match.homeTeam}</span>
+              </div>
+              <span className="rounded-full bg-foreground px-2.5 py-1 text-[0.65rem] font-black text-background">
+                VS
+              </span>
+              <div className="flex items-center gap-2">
+                {awayLogo ? (
+                  <div className="relative grid size-12 place-items-center">
+                    <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/80 via-background/60 to-background/30 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.55),inset_-6px_-8px_14px_rgba(15,23,42,0.08),0_10px_18px_rgba(15,23,42,0.16)] ring-1 ring-white/40 backdrop-blur-xl dark:from-white/15 dark:via-background/45 dark:to-background/20 dark:ring-white/15" />
+                    <div className="relative z-10 grid w-8 place-items-center overflow-hidden rounded-full bg-transparent">
+                      <Image
+                        src={awayLogo}
+                        alt={`${match.awayTeam} logo`}
+                        width={48}
+                        height={48}
+                        className="h-auto w-8 object-contain"
+                      />
+                    </div>
+                  </div>
+                ) : null}
+                <span>{match.awayTeam}</span>
+              </div>
+            </div>
             <p className="mt-2 text-sm text-muted-foreground">
               {match.level} · {match.format}
             </p>

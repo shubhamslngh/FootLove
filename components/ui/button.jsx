@@ -13,6 +13,7 @@ const buttonVariants = cva(
         secondary: "bg-card text-foreground shadow-[0_8px_22px_rgba(17,24,39,0.08)] ring-1 ring-border hover:bg-secondary",
         outline: "bg-card text-foreground shadow-[0_8px_22px_rgba(17,24,39,0.06)] ring-1 ring-border hover:bg-secondary",
         ghost: "text-foreground hover:bg-secondary",
+        destructive: "bg-destructive text-destructive-foreground shadow-[0_10px_24px_rgba(220,38,38,0.24)] hover:bg-destructive/90",
       },
       size: {
         default: "h-11 px-4 py-2",

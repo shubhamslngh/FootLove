@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
@@ -8,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/lib/server/auth";
 import { publicUser, readDb } from "@/lib/server/db";
 import { canManagePlatform } from "@/lib/server/roles";
+import { getTeamLogoUrl } from "@/lib/team-logos";
 
 export default async function MatchScorePage({ params }) {
   const user = await getCurrentUser();
@@ -76,6 +78,8 @@ export default async function MatchScorePage({ params }) {
   );
   const hostBooking =
     matchBookings.find((booking) => booking.userId === user.id) || null;
+  const homeLogo = getTeamLogoUrl(match.homeTeam);
+  const awayLogo = getTeamLogoUrl(match.awayTeam);
 
   return (
     <AppShell user={user}>
@@ -84,9 +88,39 @@ export default async function MatchScorePage({ params }) {
           <div>
             <p className="text-sm font-semibold text-primary">Scoring</p>
             <h1 className="text-3xl font-bold">{match.title}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {match.homeTeam} vs {match.awayTeam}
-            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-bold">
+              <div className="flex items-center gap-2">
+                {homeLogo ? (
+                  <div className="grid size-12 place-items-center overflow-hidden rounded-full bg-card p-1 ring-1 ring-border">
+                    <Image
+                      src={homeLogo}
+                      alt={`${match.homeTeam} logo`}
+                      width={48}
+                      height={48}
+                      className="size-full object-contain"
+                    />
+                  </div>
+                ) : null}
+                <span>{match.homeTeam}</span>
+              </div>
+              <span className="rounded-full bg-foreground px-2.5 py-1 text-[0.65rem] font-black text-background">
+                VS
+              </span>
+              <div className="flex items-center gap-2">
+                {awayLogo ? (
+                  <div className="grid size-12 place-items-center overflow-hidden rounded-full bg-card p-1 ring-1 ring-border">
+                    <Image
+                      src={awayLogo}
+                      alt={`${match.awayTeam} logo`}
+                      width={48}
+                      height={48}
+                      className="size-full object-contain"
+                    />
+                  </div>
+                ) : null}
+                <span>{match.awayTeam}</span>
+              </div>
+            </div>
           </div>
           <Badge>{match.status}</Badge>
         </div>

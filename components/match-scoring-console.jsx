@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getTeamLogoUrl } from "@/lib/team-logos";
 
 const PHASE_LABELS = {
   first_half: "First Half",
@@ -1172,11 +1173,28 @@ function LiveTeamColumn({
 }
 
 function TeamScore({ name, disabled, onRemove, onAdd }) {
+  const logo = getTeamLogoUrl(name);
+
   return (
     <div className="grid justify-items-center gap-2 text-center">
-      <div className="grid size-10 place-items-center rounded-full bg-white/10 text-sm font-bold">
-        {getInitials(name)}
-      </div>
+      {logo ? (
+        <div className="relative grid size-14 place-items-center">
+          <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/35 via-white/10 to-white/5 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.3),inset_-6px_-8px_14px_rgba(15,23,42,0.16),0_10px_18px_rgba(15,23,42,0.2)] ring-1 ring-white/15 backdrop-blur-xl" />
+          <div className="relative z-10 grid w-10 place-items-center overflow-hidden rounded-full bg-transparent">
+            <Image
+              src={logo}
+              alt={`${name} logo`}
+              width={56}
+              height={56}
+              className="h-auto w-10 object-contain"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="grid size-10 place-items-center rounded-full bg-white/10 text-sm font-bold">
+          {getInitials(name)}
+        </div>
+      )}
       <p className="max-w-24 truncate text-xs font-bold">{name}</p>
       <div className="flex gap-1">
         <button
@@ -1381,14 +1399,31 @@ function MatchStats({ match, players }) {
 }
 
 function ResultTeam({ name, score, align = "left" }) {
+  const logo = getTeamLogoUrl(name);
+
   return (
     <div
       className={`grid gap-2 ${
         align === "right" ? "justify-items-end text-right" : ""
       }`}>
-      <div className="grid size-12 place-items-center rounded-full bg-white/10 text-sm font-black">
-        {getInitials(name)}
-      </div>
+      {logo ? (
+        <div className="relative grid h-18 w-18 shrink-0 place-items-center">
+          <div className="pointer-events-none absolute inset-0 rounded-full bg-linear-to-br from-white/80 via-background/60 to-background/30 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.55),inset_-6px_-8px_14px_rgba(15,23,42,0.08),0_10px_18px_rgba(15,23,42,0.16)] ring-1 ring-white/40 backdrop-blur-xl dark:from-white/15 dark:via-background/45 dark:to-background/20 dark:ring-white/15" />
+          <div className="relative z-10 grid w-12 place-items-center overflow-hidden rounded-sm bg-transparent">
+            <Image
+              src={logo}
+              alt={`${name} logo`}
+              width={64}
+              height={64}
+              className="h-auto w-12 object-contain"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="grid size-12 place-items-center rounded-full bg-white/10 text-sm font-black">
+          {getInitials(name)}
+        </div>
+      )}
       <div>
         <p className="max-w-28 truncate text-sm font-bold">{name}</p>
         <p className="text-xs font-bold text-white/55">{score} goals</p>

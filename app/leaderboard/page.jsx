@@ -54,10 +54,10 @@ export default async function LeaderboardPage() {
         </section>
 
         <Tabs defaultValue="overall">
-          <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsList className="w-full text-black justify-start overflow-x-auto">
             {categories.map(({ id, label, icon: Icon }) => (
-              <TabsTrigger key={id} value={id} className="gap-2">
-                <Icon className="size-4" />
+              <TabsTrigger key={id} value={id} className="gap-2 text-sm">
+                <Icon className="size-4 text-fuchsia-800" />
                 {label}
               </TabsTrigger>
             ))}

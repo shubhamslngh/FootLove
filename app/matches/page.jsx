@@ -83,9 +83,16 @@ export default async function MatchesPage() {
 
         <section className="space-y-3">
           <h2 className="text-lg font-bold">Open matches</h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-2">
             {activeMatches.map((match) => (
-              <MatchCard key={match.id} match={match} canBook={canBook} existingBooking={match.userBooking} pendingCount={match.pendingCount} showPending={canHost} />
+              <MatchCard
+                key={match.id}
+                match={match}
+                canBook={canBook}
+                existingBooking={match.userBooking}
+                pendingCount={match.pendingCount}
+                showPending={canHost}
+              />
             ))}
             {!activeMatches.length && (
               <div className="rounded-[24px] bg-card p-5 text-sm font-semibold text-muted-foreground shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border md:col-span-2 lg:col-span-3">
@@ -96,37 +103,8 @@ export default async function MatchesPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-lg font-bold">My matches</h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            {myBookings.map((booking) => (
-              <Card key={booking.id}>
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-3">
-                    <CardTitle className="text-lg">{booking.match.title}</CardTitle>
-                    <Badge>{booking.status}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                  <p>
-                    {formatDisplayDate(booking.match.date)} ·{" "}
-                    {booking.match.time}
-                  </p>
-                  <p>{booking.match.venue?.name}, {booking.match.venue?.area}</p>
-                  <p>Slot: {booking.slotRole}</p>
-                </CardContent>
-              </Card>
-            ))}
-            {!myBookings.length && (
-              <div className="rounded-[24px] bg-card p-5 text-sm font-semibold text-muted-foreground shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border md:col-span-2 lg:col-span-3">
-                Your booked matches will appear here.
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="space-y-3">
           <h2 className="text-lg font-bold">Past matches</h2>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-2">
             {pastMatches.map((match) => (
               <MatchCard
                 key={match.id}
@@ -140,6 +118,38 @@ export default async function MatchesPage() {
             {!pastMatches.length && (
               <div className="rounded-[24px] bg-card p-5 text-sm font-semibold text-muted-foreground shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border md:col-span-2 lg:col-span-3">
                 Completed and awaiting-result matches will appear here.
+              </div>
+            )}
+          </div>
+        </section>
+        <section className="space-y-3">
+          <h2 className="text-lg font-bold">My matches</h2>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-2">
+            {myBookings.map((booking) => (
+              <Card key={booking.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-3">
+                    <CardTitle className="text-lg">
+                      {booking.match.title}
+                    </CardTitle>
+                    <Badge>{booking.status}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <p>
+                    {formatDisplayDate(booking.match.date)} ·{" "}
+                    {booking.match.time}
+                  </p>
+                  <p>
+                    {booking.match.venue?.name}, {booking.match.venue?.area}
+                  </p>
+                  <p>Slot: {booking.slotRole}</p>
+                </CardContent>
+              </Card>
+            ))}
+            {!myBookings.length && (
+              <div className="rounded-[24px] bg-card p-5 text-sm font-semibold text-muted-foreground shadow-[0_14px_34px_rgba(17,24,39,0.08)] ring-1 ring-border md:col-span-2 lg:col-span-3">
+                Your booked matches will appear here.
               </div>
             )}
           </div>
