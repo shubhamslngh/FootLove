@@ -91,13 +91,12 @@ export default async function MatchScorePage({ params }) {
             <div className="mt-3 flex flex-wrap items-center gap-3 text-sm font-bold">
               <div className="flex items-center gap-2">
                 {homeLogo ? (
-                  <div className="grid size-12 place-items-center overflow-hidden rounded-full bg-card p-1 ring-1 ring-border">
+                  <div className="relative grid size-12 place-items-center overflow-hidden rounded-full bg-card p-1 ring-1 ring-border">
                     <Image
                       src={homeLogo}
                       alt={`${match.homeTeam} logo`}
-                      width={48}
-                      height={48}
-                      className="size-full object-contain"
+                      fill
+                      className="object-contain"
                     />
                   </div>
                 ) : null}
@@ -108,13 +107,12 @@ export default async function MatchScorePage({ params }) {
               </span>
               <div className="flex items-center gap-2">
                 {awayLogo ? (
-                  <div className="grid size-12 place-items-center overflow-hidden rounded-full bg-card p-1 ring-1 ring-border">
+                  <div className="relative grid size-12 place-items-center overflow-hidden rounded-full bg-card p-1 ring-1 ring-border">
                     <Image
                       src={awayLogo}
                       alt={`${match.awayTeam} logo`}
-                      width={48}
-                      height={48}
-                      className="size-full object-contain"
+                      fill
+                      className="object-contain"
                     />
                   </div>
                 ) : null}

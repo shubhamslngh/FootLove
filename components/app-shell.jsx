@@ -49,7 +49,7 @@ export function AppShell({ children, user }) {
                 alt="SoccerSesh logo"
                 width={144}
                 height={40}
-                className={`h-30 w-full origin-left object-contain transition-transform duration-300 ease-in-out ${
+                className={`h-30 w-auto origin-left object-contain transition-transform duration-300 ease-in-out ${
                   isCondensed ? "scale-[0.86]" : "scale-100"
                 }`}
                 priority

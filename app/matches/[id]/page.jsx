@@ -143,13 +143,12 @@ export default async function MatchDetailPage({ params }) {
                 {homeLogo ? (
                   <div className="relative grid size-12 place-items-center">
                     <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/80 via-background/60 to-background/30 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.55),inset_-6px_-8px_14px_rgba(15,23,42,0.08),0_10px_18px_rgba(15,23,42,0.16)] ring-1 ring-white/40 backdrop-blur-xl dark:from-white/15 dark:via-background/45 dark:to-background/20 dark:ring-white/15" />
-                    <div className="relative z-10 grid w-8 place-items-center overflow-hidden rounded-full bg-transparent">
+                    <div className="relative z-10 grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-transparent">
                       <Image
                         src={homeLogo}
                         alt={`${match.homeTeam} logo`}
-                        width={48}
-                        height={48}
-                        className="h-auto w-8 object-contain"
+                        fill
+                        className="object-contain"
                       />
                     </div>
                   </div>
@@ -163,13 +162,12 @@ export default async function MatchDetailPage({ params }) {
                 {awayLogo ? (
                   <div className="relative grid size-12 place-items-center">
                     <div className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-br from-white/80 via-background/60 to-background/30 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.55),inset_-6px_-8px_14px_rgba(15,23,42,0.08),0_10px_18px_rgba(15,23,42,0.16)] ring-1 ring-white/40 backdrop-blur-xl dark:from-white/15 dark:via-background/45 dark:to-background/20 dark:ring-white/15" />
-                    <div className="relative z-10 grid w-8 place-items-center overflow-hidden rounded-full bg-transparent">
+                    <div className="relative z-10 grid h-8 w-8 place-items-center overflow-hidden rounded-full bg-transparent">
                       <Image
                         src={awayLogo}
                         alt={`${match.awayTeam} logo`}
-                        width={48}
-                        height={48}
-                        className="h-auto w-8 object-contain"
+                        fill
+                        className="object-contain"
                       />
                     </div>
                   </div>

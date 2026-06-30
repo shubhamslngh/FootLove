@@ -176,13 +176,12 @@ export function MatchCard({
               {homeFlag ? (
                 <div className="relative grid h-18 w-18 shrink-0 justify-self-end place-items-center">
                   <div className="pointer-events-none absolute inset-0 rounded-full bg-linear-to-br from-white/80 via-background/60 to-background/30 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.55),inset_-6px_-8px_14px_rgba(15,23,42,0.08),0_10px_18px_rgba(15,23,42,0.16)] ring-1 ring-white/40 backdrop-blur-xl dark:from-white/15 dark:via-background/45 dark:to-background/20 dark:ring-white/15" />
-                  <div className="relative z-10 grid w-12 place-items-center overflow-hidden rounded-sm bg-transparent">
+                  <div className="relative z-10 grid h-12 w-12 place-items-center overflow-hidden rounded-sm bg-transparent">
                     <Image
                       src={homeFlag}
                       alt={`${homeTeam} logo`}
-                      width={48}
-                      height={48}
-                      className="h-auto w-12 object-contain"
+                      fill
+                      className="object-contain"
                     />
                   </div>
                 </div>
@@ -231,13 +230,12 @@ export function MatchCard({
               {awayFlag ? (
                 <div className="relative grid h-18 w-18 shrink-0 justify-self-end place-items-center">
                   <div className="pointer-events-none absolute inset-0 rounded-full bg-linear-to-br from-white/80 via-background/60 to-background/30 shadow-[inset_5px_5px_12px_rgba(255,255,255,0.55),inset_-6px_-8px_14px_rgba(15,23,42,0.08),0_10px_18px_rgba(15,23,42,0.16)] ring-1 ring-white/40 backdrop-blur-xl dark:from-white/15 dark:via-background/45 dark:to-background/20 dark:ring-white/15" />
-                  <div className="relative z-10 grid w-12 place-items-center overflow-hidden rounded-sm bg-transparent">
+                  <div className="relative z-10 grid h-12 w-12 place-items-center overflow-hidden rounded-sm bg-transparent">
                     <Image
                       src={awayFlag}
                       alt={`${awayTeam} logo`}
-                      width={48}
-                      height={48}
-                      className="h-auto w-12 object-contain"
+                      fill
+                      className="object-contain"
                     />
                   </div>
                 </div>

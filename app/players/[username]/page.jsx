@@ -62,7 +62,7 @@ export default async function PublicPlayerPage({ params }) {
               alt="SoccerSesh"
               width={144}
               height={40}
-              className="h-30 w-auto object-cover"
+              className="h-30 w-auto object-contain"
               priority
             />
           </Link>

@@ -49,6 +49,10 @@ const GOAL_TYPES = [
   ["penalty", "Penalty"],
 ];
 
+function candidateKey(candidate) {
+  return `${candidate.phone}-${candidate.username || candidate.name}`;
+}
+
 export function MatchScoringConsole({
   match,
   players,
@@ -74,6 +78,8 @@ export function MatchScoringConsole({
   const [showManage, setShowManage] = useState(false);
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [playerSearch, setPlayerSearch] = useState("");
+  const [selectedPlayers, setSelectedPlayers] = useState([]);
+  const [pendingTeam, setPendingTeam] = useState("home");
   const [teamNameDraft, setTeamNameDraft] = useState({
     homeTeam: match.homeTeam,
     awayTeam: match.awayTeam,
@@ -190,7 +196,8 @@ export function MatchScoringConsole({
         setPlayerLookup({
           status: result.data.found ? "found" : "not-found",
           player: result.data.player || null,
-          matches: result.data.found && result.data.player ? [result.data.player] : [],
+          matches:
+            result.data.found && result.data.player ? [result.data.player] : [],
           alreadyAdded: Boolean(result.data.alreadyAdded),
           message: "",
         });
@@ -349,6 +356,61 @@ export function MatchScoringConsole({
     router.refresh();
   }
 
+  async function addSelectedPlayers() {
+    if (!selectedPlayers.length) return;
+    setLoading("offline-player");
+    setMessage("");
+    let addedCount = 0;
+
+    for (const candidate of selectedPlayers) {
+      const response = await fetch(`/api/matches/${match.id}/offline-player`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: candidate.name,
+          phone: candidate.phone,
+          team: pendingTeam,
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        setMessage(result?.error?.message || `Could not add ${candidate.name}`);
+        continue;
+      }
+
+      const booking = result.data.booking;
+      const registeredPlayer = result.data.player;
+      const player = {
+        bookingId: booking.id,
+        team: booking.team || pendingTeam,
+        name: registeredPlayer?.name || booking.guestName,
+        username: registeredPlayer?.username || booking.guestUsername,
+        phone: registeredPlayer?.phone || booking.guestPhone,
+        isOffline: !registeredPlayer,
+      };
+      setScoringPlayers((current) => [...current, player]);
+      setAssignments((current) => ({
+        ...current,
+        [player.bookingId]: player.team,
+      }));
+      addedCount += 1;
+    }
+
+    setLoading("");
+    setShowAddPlayer(false);
+    setPlayerSearch("");
+    setSelectedPlayers([]);
+    setOfflinePlayer({ name: "", phone: "" });
+    setPlayerLookup({
+      status: "idle",
+      player: null,
+      matches: [],
+      alreadyAdded: false,
+      message: "",
+    });
+    if (addedCount) router.refresh();
+  }
+
   async function updateTeamNames() {
     setLoading("team-names");
     setMessage("");
@@ -489,11 +551,16 @@ export function MatchScoringConsole({
           setShowAddPlayer={setShowAddPlayer}
           playerSearch={playerSearch}
           setPlayerSearch={setPlayerSearch}
+          pendingTeam={pendingTeam}
+          setPendingTeam={setPendingTeam}
+          selectedPlayers={selectedPlayers}
+          setSelectedPlayers={setSelectedPlayers}
           offlinePlayer={offlinePlayer}
           setOfflinePlayer={setOfflinePlayer}
           playerLookup={playerLookup}
           setPlayerLookup={setPlayerLookup}
           onAddOfflinePlayer={addOfflinePlayer}
+          onAddSelectedPlayers={addSelectedPlayers}
           addingOfflinePlayer={loading === "offline-player"}
         />
         <Button
@@ -546,6 +613,10 @@ export function MatchScoringConsole({
             setShowAddPlayer={setShowAddPlayer}
             playerSearch={playerSearch}
             setPlayerSearch={setPlayerSearch}
+            pendingTeam={pendingTeam}
+            setPendingTeam={setPendingTeam}
+            selectedPlayers={selectedPlayers}
+            setSelectedPlayers={setSelectedPlayers}
             offlinePlayer={offlinePlayer}
             setOfflinePlayer={setOfflinePlayer}
             playerLookup={playerLookup}
@@ -554,6 +625,7 @@ export function MatchScoringConsole({
             onSaveTeamNames={updateTeamNames}
             onSaveLineup={saveLineupChanges}
             onAddPlayer={addOfflinePlayer}
+            onAddSelectedPlayers={addSelectedPlayers}
             onRemovePlayer={removePlayer}
           />
         )}
@@ -589,7 +661,11 @@ export function MatchScoringConsole({
               onClick={() =>
                 control(liveMatch.timerRunning ? "pause" : "resume")
               }
-              title={liveMatch.timerRunning ? "Pause match timer" : "Resume match timer"}
+              title={
+                liveMatch.timerRunning
+                  ? "Pause match timer"
+                  : "Resume match timer"
+              }
               className="mt-2 inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-base font-black text-white ring-1 ring-white/15">
               {liveMatch.timerRunning ? (
                 <Pause className="size-5 text-red-400" />
@@ -789,27 +865,32 @@ export function MatchScoringConsole({
         />
       )}
       {showManage && (
-          <ManageDrawer
-            match={liveMatch}
-            players={activePlayers}
-            assignments={assignments}
-            setAssignments={setAssignments}
-            loading={loading}
-            isCompleted={isCompleted}
-            teamNameDraft={teamNameDraft}
-            setTeamNameDraft={setTeamNameDraft}
-            showAddPlayer={showAddPlayer}
-            setShowAddPlayer={setShowAddPlayer}
-            playerSearch={playerSearch}
-            setPlayerSearch={setPlayerSearch}
-            offlinePlayer={offlinePlayer}
-            setOfflinePlayer={setOfflinePlayer}
-            playerLookup={playerLookup}
-            setPlayerLookup={setPlayerLookup}
-            onClose={() => setShowManage(false)}
-            onSaveTeamNames={updateTeamNames}
-            onSaveLineup={saveLineupChanges}
+        <ManageDrawer
+          match={liveMatch}
+          players={activePlayers}
+          assignments={assignments}
+          setAssignments={setAssignments}
+          loading={loading}
+          isCompleted={isCompleted}
+          teamNameDraft={teamNameDraft}
+          setTeamNameDraft={setTeamNameDraft}
+          showAddPlayer={showAddPlayer}
+          setShowAddPlayer={setShowAddPlayer}
+          playerSearch={playerSearch}
+          setPlayerSearch={setPlayerSearch}
+          pendingTeam={pendingTeam}
+          setPendingTeam={setPendingTeam}
+          selectedPlayers={selectedPlayers}
+          setSelectedPlayers={setSelectedPlayers}
+          offlinePlayer={offlinePlayer}
+          setOfflinePlayer={setOfflinePlayer}
+          playerLookup={playerLookup}
+          setPlayerLookup={setPlayerLookup}
+          onClose={() => setShowManage(false)}
+          onSaveTeamNames={updateTeamNames}
+          onSaveLineup={saveLineupChanges}
           onAddPlayer={addOfflinePlayer}
+          onAddSelectedPlayers={addSelectedPlayers}
           onRemovePlayer={removePlayer}
         />
       )}
@@ -828,11 +909,16 @@ function TeamAssignment({
   setShowAddPlayer,
   playerSearch,
   setPlayerSearch,
+  pendingTeam,
+  setPendingTeam,
+  selectedPlayers,
+  setSelectedPlayers,
   offlinePlayer,
   setOfflinePlayer,
   playerLookup,
   setPlayerLookup,
   onAddOfflinePlayer,
+  onAddSelectedPlayers,
   addingOfflinePlayer,
 }) {
   const teamMeta = {
@@ -865,6 +951,7 @@ function TeamAssignment({
             onClick={() => {
               setShowAddPlayer((visible) => !visible);
               setPlayerSearch("");
+              setSelectedPlayers([]);
               setOfflinePlayer({ name: "", phone: "" });
             }}>
             <Plus /> {showAddPlayer ? "Close" : "Add player"}
@@ -881,125 +968,214 @@ function TeamAssignment({
       </div>
 
       {showAddPlayer && (
-        <div className="grid gap-3 border-b border-border p-4">
-          <div className="grid gap-3">
-            <Input
-              value={playerSearch}
-              onChange={(event) => setPlayerSearch(event.target.value)}
-              placeholder="Search by player name or mobile"
-            />
-          </div>
-
-          {(playerLookup.status === "results" || playerLookup.status === "found") &&
-            playerLookup.matches.length > 0 && (
-              <div className="grid gap-2">
-                {playerLookup.matches.map((candidate) => (
-                  <button
-                    key={`${candidate.phone}-${candidate.username || candidate.name}`}
-                    type="button"
-                    className="flex w-full items-center justify-between gap-3 rounded-2xl bg-secondary p-3 text-left transition hover:bg-secondary/80"
-                    onClick={() => {
-                      setPlayerSearch(candidate.name || candidate.username || "");
-                      setOfflinePlayer({
-                        name: candidate.guest ? candidate.name || "" : "",
-                        phone: String(candidate.phone || "").replace(/\D/g, "").slice(-10),
-                      });
-                      setPlayerLookup({
-                        status: "found",
-                        player: candidate,
-                        matches: [candidate],
-                        alreadyAdded: Boolean(candidate.alreadyAdded),
-                        message: "",
-                      });
-                    }}>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold">
-                        {candidate.name}
-                      </p>
-                      <p className="truncate text-xs font-semibold text-muted-foreground">
-                        @{candidate.username || "player"} · {candidate.phone}
-                      </p>
-                    </div>
-                    <span className="text-xs font-bold text-muted-foreground">
-                      {candidate.alreadyAdded ? "Added" : candidate.guest ? "Guest" : "Registered"}
-                    </span>
-                  </button>
-                ))}
+        <div className="border-b border-border p-4">
+          <div className="overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card via-card to-secondary/35 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/70 px-4 py-4">
+              <div className="space-y-1">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                  Add player
+                </p>
+                <h3 className="text-base font-bold">
+                  Find a player or add an offline booking
+                </h3>
+                
               </div>
-            )}
-
-          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-            <Input
-              value={offlinePlayer.phone}
-              onChange={(event) =>
-                setOfflinePlayer((current) => ({
-                  ...current,
-                  phone: event.target.value.replace(/\D/g, "").slice(0, 10),
-                }))
-              }
-              inputMode="numeric"
-              placeholder="Enter mobile number"
-            />
-            <Button
-              type="button"
-              className="md:min-w-44"
-              disabled={
-                addingOfflinePlayer ||
-                offlinePlayer.phone.trim().length < 10 ||
-                playerLookup.status === "checking" ||
-                playerLookup.alreadyAdded ||
-                (playerLookup.status !== "found" &&
-                  offlinePlayer.name.trim().length < 2)
-              }
-              onClick={onAddOfflinePlayer}>
-              <Plus />{" "}
-              {addingOfflinePlayer
-                ? "Adding..."
-                : playerLookup.status === "found"
-                  ? "Add known player"
-                  : "Add offline player"}
-            </Button>
-          </div>
-
-          {playerLookup.status === "checking" && (
-            <p className="text-sm font-semibold text-muted-foreground">
-              Searching players...
-            </p>
-          )}
-
-          {playerLookup.status === "found" && (
-            <div className="rounded-2xl bg-secondary p-3 text-sm">
-              <p className="font-bold">
-                @{playerLookup.player?.username || playerLookup.player?.name}
-              </p>
-              <p className="text-muted-foreground">
-                {playerLookup.player?.name}
-                {playerLookup.alreadyAdded
-                  ? " is already added."
-                  : " found in registered users."}
-              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className={`rounded-full px-3 py-1 text-xs font-bold transition ${
+                    pendingTeam === "home"
+                      ? "bg-emerald-500 text-white"
+                      : "bg-primary/10 text-primary"
+                  }`}
+                  onClick={() => setPendingTeam("home")}>
+                  Home side
+                </button>
+                <button
+                  type="button"
+                  className={`rounded-full px-3 py-1 text-xs font-bold transition ${
+                    pendingTeam === "away"
+                      ? "bg-sky-500 text-white"
+                      : "bg-primary/10 text-primary"
+                  }`}
+                  onClick={() => setPendingTeam("away")}>
+                  Away side
+                </button>
+              </div>
             </div>
-          )}
 
-          {playerLookup.status === "not-found" && (
-            <Input
-              value={offlinePlayer.name}
-              onChange={(event) =>
-                setOfflinePlayer((current) => ({
-                  ...current,
-                  name: event.target.value,
-                }))
-              }
-                placeholder="Offline player name"
-              />
-          )}
+            <div className="grid gap-4 p-4">
+              <div className="grid gap-3 md:grid-cols-[1.2fr_0.8fr]">
+                <Input
+                  value={playerSearch}
+                  onChange={(event) => setPlayerSearch(event.target.value)}
+                  placeholder="Search player name or mobile"
+                />
+                <Input
+                  value={offlinePlayer.phone}
+                  onChange={(event) =>
+                    setOfflinePlayer((current) => ({
+                      ...current,
+                      phone: event.target.value.replace(/\D/g, "").slice(0, 10),
+                    }))
+                  }
+                  inputMode="numeric"
+                  placeholder="10-digit mobile"
+                />
+              </div>
 
-          {playerLookup.status === "error" && (
-            <p className="text-sm font-semibold text-red-500">
-              {playerLookup.message}
-            </p>
-          )}
-        </div>
+              {!!selectedPlayers.length && (
+                <div className="flex flex-wrap gap-2">
+                  {selectedPlayers.map((candidate) => (
+                    <button
+                      key={candidateKey(candidate)}
+                      type="button"
+                      className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/15"
+                      onClick={() =>
+                        setSelectedPlayers((current) =>
+                          current.filter(
+                            (player) =>
+                              candidateKey(player) !== candidateKey(candidate),
+                          ),
+                        )
+                      }>
+                      <span className="max-w-28 truncate">{candidate.name}</span>
+                      <X className="size-3" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {(playerLookup.status === "results" ||
+                playerLookup.status === "found") &&
+                playerLookup.matches.length > 0 && (
+                  <div className="grid gap-2">
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                      Matches
+                    </p>
+                    <div className="grid gap-2">
+                      {playerLookup.matches.map((candidate) => (
+                        <button
+                          key={candidateKey(candidate)}
+                          type="button"
+                          className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 ${
+                            selectedPlayers.some(
+                              (player) =>
+                                candidateKey(player) ===
+                                candidateKey(candidate),
+                            )
+                              ? "border-primary/40 bg-primary/10"
+                              : "border-border/70 bg-background hover:border-primary/30 hover:bg-primary/5"
+                          }`}
+                          onClick={() => {
+                            setSelectedPlayers((current) =>
+                              current.some(
+                                (player) =>
+                                  candidateKey(player) ===
+                                  candidateKey(candidate),
+                              )
+                                ? current.filter(
+                                    (player) =>
+                                      candidateKey(player) !==
+                                      candidateKey(candidate),
+                                  )
+                                : [...current, candidate],
+                            );
+                          }}>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="truncate text-sm font-bold">
+                                {candidate.name}
+                              </p>
+                              <span className="rounded-full bg-secondary px-2 py-0.5 text-[0.65rem] font-bold uppercase text-secondary-foreground">
+                                {candidate.alreadyAdded
+                                  ? "Added"
+                                  : candidate.guest
+                                    ? "Guest"
+                                    : "Registered"}
+                              </span>
+                            </div>
+                            <p className="truncate text-xs font-semibold text-muted-foreground">
+                              @{candidate.username || "player"} ·{" "}
+                              {candidate.phone}
+                            </p>
+                          </div>
+                          <div
+                            className={`grid size-5 place-items-center rounded-full border ${selectedPlayers.some((player) => candidateKey(player) === candidateKey(candidate)) ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background"}`}>
+                            {selectedPlayers.some(
+                              (player) =>
+                                candidateKey(player) ===
+                                candidateKey(candidate),
+                            ) ? (
+                              <Check className="size-3.5" />
+                            ) : null}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+              {playerLookup.status === "found" && (
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm">
+                  <p className="font-bold text-foreground">
+                    @
+                    {playerLookup.player?.username || playerLookup.player?.name}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {playerLookup.player?.name}
+                    {playerLookup.alreadyAdded
+                      ? " is already added."
+                      : " found in registered users."}
+                  </p>
+                </div>
+              )}
+
+              {playerLookup.status === "not-found" && (
+                <Input
+                  value={offlinePlayer.name}
+                  onChange={(event) =>
+                    setOfflinePlayer((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                  placeholder="Offline player name"
+                />
+              )}
+
+              {playerLookup.status === "checking" && (
+                <div className="rounded-2xl border border-border/70 bg-secondary/60 px-3 py-3 text-sm font-semibold text-muted-foreground">
+                  Searching players...
+                </div>
+              )}
+
+              {playerLookup.status === "error" && (
+                <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-3 text-sm font-semibold text-red-600 dark:text-red-300">
+                  {playerLookup.message}
+                </div>
+              )}
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {selectedPlayers.length
+                        ? `${selectedPlayers.length} player${selectedPlayers.length === 1 ? "" : "s"} selected for ${pendingTeam === "home" ? "home" : "away"}`
+                        : "Pick one or more players, then add them in one step."}
+                    </p>
+                    <Button
+                      type="button"
+                      className="min-w-40 shadow-sm"
+                      disabled={addingOfflinePlayer || !selectedPlayers.length}
+                      onClick={onAddSelectedPlayers}>
+                      <Plus />
+                      {addingOfflinePlayer
+                        ? "Adding..."
+                        : `Finalize ${selectedPlayers.length || ""} player${selectedPlayers.length === 1 ? "" : "s"} to ${pendingTeam}`.trim()}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
       )}
 
       <div className="relative min-h-130 overflow-hidden bg-[#168447] p-3 text-white sm:p-5">
@@ -1990,7 +2166,9 @@ function PlayerActionDrawer({ action, loading, onClose, onGoal, onEvent }) {
                 height={20}
                 className="size-5 object-contain"
               />
-              <span className="text-[0.65rem] font-bold leading-none">Goal</span>
+              <span className="text-[0.65rem] font-bold leading-none">
+                Goal
+              </span>
             </Button>
             <Button
               type="button"
@@ -2006,7 +2184,9 @@ function PlayerActionDrawer({ action, loading, onClose, onGoal, onEvent }) {
                 height={24}
                 className="size-6 object-contain"
               />
-              <span className="text-[0.65rem] font-bold leading-none">Foul</span>
+              <span className="text-[0.65rem] font-bold leading-none">
+                Foul
+              </span>
             </Button>
             <Button
               type="button"
@@ -2022,7 +2202,9 @@ function PlayerActionDrawer({ action, loading, onClose, onGoal, onEvent }) {
                 height={24}
                 className="size-6 object-contain"
               />
-              <span className="text-[0.65rem] font-bold leading-none">Injury</span>
+              <span className="text-[0.65rem] font-bold leading-none">
+                Injury
+              </span>
             </Button>
             <Button
               type="button"
@@ -2104,6 +2286,10 @@ function ManageDrawer({
   setShowAddPlayer,
   playerSearch,
   setPlayerSearch,
+  pendingTeam,
+  setPendingTeam,
+  selectedPlayers,
+  setSelectedPlayers,
   offlinePlayer,
   setOfflinePlayer,
   playerLookup,
@@ -2112,6 +2298,7 @@ function ManageDrawer({
   onSaveTeamNames,
   onSaveLineup,
   onAddPlayer,
+  onAddSelectedPlayers,
   onRemovePlayer,
 }) {
   const addingPlayer = loading === "offline-player";
@@ -2130,7 +2317,10 @@ function ManageDrawer({
             <p className="text-sm font-semibold text-primary">Match setup</p>
             <h2 className="text-xl font-bold">Manage</h2>
           </div>
-          <button type="button" title="Close match management" onClick={onClose}>
+          <button
+            type="button"
+            title="Close match management"
+            onClick={onClose}>
             <X className="size-5" />
           </button>
         </div>
@@ -2183,6 +2373,7 @@ function ManageDrawer({
                 onClick={() => {
                   setShowAddPlayer((visible) => !visible);
                   setPlayerSearch("");
+                  setSelectedPlayers([]);
                   setOfflinePlayer({ name: "", phone: "" });
                 }}>
                 <Plus /> {showAddPlayer ? "Close" : "Add player"}
@@ -2190,111 +2381,216 @@ function ManageDrawer({
             </div>
 
             {showAddPlayer && (
-              <div className="grid gap-3 rounded-2xl bg-secondary p-3">
-                <Input
-                  value={playerSearch}
-                  onChange={(event) => setPlayerSearch(event.target.value)}
-                  placeholder="Search by player name or mobile"
-                />
-                {(playerLookup.status === "results" || playerLookup.status === "found") &&
+              <div className="overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-card via-card to-secondary/35 shadow-[0_10px_30px_rgba(15,23,42,0.08)]">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/70 px-4 py-4">
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                      Add player
+                    </p>
+                    <h3 className="text-base font-bold">
+                      Find a player or add an offline booking
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Search by name or phone number, then confirm the entry.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className={`rounded-full px-3 py-1 text-xs font-bold transition ${
+                        pendingTeam === "home"
+                          ? "bg-emerald-500 text-white"
+                          : "bg-primary/10 text-primary"
+                      }`}
+                      onClick={() => setPendingTeam("home")}>
+                      Home side
+                    </button>
+                    <button
+                      type="button"
+                      className={`rounded-full px-3 py-1 text-xs font-bold transition ${
+                        pendingTeam === "away"
+                          ? "bg-sky-500 text-white"
+                          : "bg-primary/10 text-primary"
+                      }`}
+                      onClick={() => setPendingTeam("away")}>
+                      Away side
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 p-4">
+                <div className="grid gap-3 md:grid-cols-[1.2fr_0.8fr]">
+                  <Input
+                    value={playerSearch}
+                    onChange={(event) => setPlayerSearch(event.target.value)}
+                    placeholder="Search player name or mobile"
+                    />
+                    <Input
+                      value={offlinePlayer.phone}
+                      onChange={(event) =>
+                        setOfflinePlayer((current) => ({
+                          ...current,
+                          phone: event.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 10),
+                        }))
+                      }
+                    inputMode="numeric"
+                    placeholder="10-digit mobile"
+                  />
+                </div>
+
+                {!!selectedPlayers.length && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPlayers.map((candidate) => (
+                      <button
+                        key={candidateKey(candidate)}
+                        type="button"
+                        className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition hover:bg-primary/15"
+                        onClick={() =>
+                          setSelectedPlayers((current) =>
+                            current.filter(
+                              (player) =>
+                                candidateKey(player) !== candidateKey(candidate),
+                            ),
+                          )
+                        }>
+                        <span className="max-w-28 truncate">{candidate.name}</span>
+                        <X className="size-3" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {(playerLookup.status === "results" ||
+                  playerLookup.status === "found") &&
                   playerLookup.matches.length > 0 && (
-                    <div className="grid gap-2">
-                      {playerLookup.matches.map((candidate) => (
-                        <button
-                          key={`${candidate.phone}-${candidate.username || candidate.name}`}
-                          type="button"
-                          className="flex w-full items-center justify-between gap-3 rounded-2xl bg-background p-3 text-left transition hover:bg-background/80"
-                          onClick={() => {
-                            setPlayerSearch(candidate.name || candidate.username || "");
-                            setOfflinePlayer({
-                              name: candidate.guest ? candidate.name || "" : "",
-                              phone: String(candidate.phone || "").replace(/\D/g, "").slice(-10),
-                            });
-                            setPlayerLookup({
-                              status: "found",
-                              player: candidate,
-                              matches: [candidate],
-                              alreadyAdded: Boolean(candidate.alreadyAdded),
-                              message: "",
-                            });
-                          }}>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-bold">{candidate.name}</p>
-                            <p className="truncate text-xs font-semibold text-muted-foreground">
-                              @{candidate.username || "player"} · {candidate.phone}
-                            </p>
-                          </div>
-                          <span className="text-xs font-bold text-muted-foreground">
-                            {candidate.alreadyAdded
-                              ? "Added"
-                              : candidate.guest
-                                ? "Guest"
-                                : "Registered"}
-                          </span>
-                        </button>
-                      ))}
+                      <div className="grid gap-2">
+                        <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                          Matches
+                        </p>
+                        <div className="grid gap-2">
+                          {playerLookup.matches.map((candidate) => (
+                            <button
+                              key={candidateKey(candidate)}
+                              type="button"
+                              className={`flex w-full items-center justify-between gap-3 rounded-2xl border px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 ${
+                                selectedPlayers.some(
+                                  (player) =>
+                                    candidateKey(player) ===
+                                    candidateKey(candidate),
+                                )
+                                  ? "border-primary/40 bg-primary/10"
+                                  : "border-border/70 bg-background hover:border-primary/30 hover:bg-primary/5"
+                              }`}
+                              onClick={() => {
+                                setSelectedPlayers((current) =>
+                                  current.some(
+                                    (player) =>
+                                      candidateKey(player) ===
+                                      candidateKey(candidate),
+                                  )
+                                    ? current.filter(
+                                        (player) =>
+                                          candidateKey(player) !==
+                                          candidateKey(candidate),
+                                      )
+                                    : [...current, candidate],
+                                );
+                              }}>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="truncate text-sm font-bold">
+                                    {candidate.name}
+                                  </p>
+                                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[0.65rem] font-bold uppercase text-secondary-foreground">
+                                    {candidate.alreadyAdded
+                                      ? "Added"
+                                      : candidate.guest
+                                        ? "Guest"
+                                        : "Registered"}
+                                  </span>
+                                </div>
+                                <p className="truncate text-xs font-semibold text-muted-foreground">
+                                  @{candidate.username || "player"} ·{" "}
+                                  {candidate.phone}
+                                </p>
+                              </div>
+                              <div
+                                className={`grid size-5 place-items-center rounded-full border ${selectedPlayers.some((player) => candidateKey(player) === candidateKey(candidate)) ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background"}`}>
+                                {selectedPlayers.some(
+                                  (player) =>
+                                    candidateKey(player) ===
+                                    candidateKey(candidate),
+                                ) ? (
+                                  <Check className="size-3.5" />
+                                ) : null}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  {playerLookup.status === "found" && (
+                    <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm">
+                      <p className="font-bold text-foreground">
+                        @
+                        {playerLookup.player?.username ||
+                          playerLookup.player?.name}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {playerLookup.player?.name}
+                        {playerLookup.alreadyAdded
+                          ? " is already added."
+                          : " found in registered users."}
+                      </p>
                     </div>
                   )}
-                <Input
-                  value={offlinePlayer.phone}
-                  onChange={(event) =>
-                    setOfflinePlayer((current) => ({
-                      ...current,
-                      phone: event.target.value.replace(/\D/g, "").slice(0, 10),
-                    }))
-                  }
-                  inputMode="numeric"
-                  placeholder="Enter mobile number"
-                />
-                {playerLookup.status === "found" && (
-                  <p className="text-sm font-semibold">
-                    @
-                    {playerLookup.player?.username || playerLookup.player?.name}
-                    <span className="font-medium text-muted-foreground">
-                      {" "}
-                      {playerLookup.alreadyAdded ? "is already added" : "found"}
-                    </span>
-                  </p>
-                )}
-                {playerLookup.status === "not-found" && (
-                  <Input
-                    value={offlinePlayer.name}
-                    onChange={(event) =>
-                      setOfflinePlayer((current) => ({
-                        ...current,
-                        name: event.target.value,
-                      }))
-                    }
-                    placeholder="Offline player name"
-                  />
-                )}
-                {playerLookup.status === "checking" && (
-                  <p className="text-sm font-semibold text-muted-foreground">
-                    Searching players...
-                  </p>
-                )}
-                {playerLookup.status === "error" && (
-                  <p className="text-sm font-semibold text-red-500">
-                    {playerLookup.message}
-                  </p>
-                )}
-                <Button
-                  type="button"
-                  disabled={
-                    addingPlayer ||
-                    offlinePlayer.phone.length < 10 ||
-                    playerLookup.status === "checking" ||
-                    playerLookup.alreadyAdded ||
-                    (playerLookup.status !== "found" &&
-                      offlinePlayer.name.trim().length < 2)
-                  }
-                  onClick={onAddPlayer}>
-                  {addingPlayer
-                    ? "Adding..."
-                    : playerLookup.status === "found"
-                      ? "Add known player"
-                      : "Add offline player"}
-                </Button>
+
+                  {playerLookup.status === "not-found" && (
+                    <Input
+                      value={offlinePlayer.name}
+                      onChange={(event) =>
+                        setOfflinePlayer((current) => ({
+                          ...current,
+                          name: event.target.value,
+                        }))
+                      }
+                      placeholder="Offline player name"
+                    />
+                  )}
+
+                  {playerLookup.status === "checking" && (
+                    <div className="rounded-2xl border border-border/70 bg-secondary/60 px-3 py-3 text-sm font-semibold text-muted-foreground">
+                      Searching players...
+                    </div>
+                  )}
+
+                  {playerLookup.status === "error" && (
+                    <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-3 py-3 text-sm font-semibold text-red-600 dark:text-red-300">
+                      {playerLookup.message}
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {selectedPlayers.length
+                        ? `${selectedPlayers.length} player${selectedPlayers.length === 1 ? "" : "s"} selected for ${pendingTeam === "home" ? "home" : "away"}`
+                        : "Pick one or more players, then add them in one step."}
+                    </p>
+                    <Button
+                      type="button"
+                      className="min-w-40 shadow-sm"
+                      disabled={addingPlayer || !selectedPlayers.length}
+                      onClick={onAddSelectedPlayers}>
+                      <Plus />
+                      {addingPlayer
+                        ? "Adding..."
+                        : `Finalize ${selectedPlayers.length || ""} player${selectedPlayers.length === 1 ? "" : "s"} to ${pendingTeam}`.trim()}
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
 
