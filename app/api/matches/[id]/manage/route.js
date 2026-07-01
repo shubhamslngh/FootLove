@@ -37,6 +37,13 @@ export async function PATCH(request, { params }) {
     match.homeTeam = homeTeam;
     match.awayTeam = awayTeam;
     if (assignments.length) {
+      if (match.status === "completed") {
+        result = {
+          error: "Completed match lineups cannot be changed",
+          status: 409,
+        };
+        return db;
+      }
       const confirmedBookings = db.bookings.filter(
         (booking) =>
           booking.matchId === id &&
@@ -80,6 +87,13 @@ export async function DELETE(request, { params }) {
       result = {
         error: "Only this match host or an admin can manage this match",
         status: 403,
+      };
+      return db;
+    }
+    if (match.status === "completed") {
+      result = {
+        error: "Players cannot be removed from a completed match",
+        status: 409,
       };
       return db;
     }

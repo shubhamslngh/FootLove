@@ -308,11 +308,7 @@ export function MatchScoringConsole({
   }
 
   async function addOfflinePlayer() {
-    const nextTeam =
-      Object.values(assignments).filter((team) => team === "home").length <=
-      Object.values(assignments).filter((team) => team === "away").length
-        ? "home"
-        : "away";
+    const nextTeam = pendingTeam;
     setLoading("offline-player");
     setMessage("");
     const response = await fetch(`/api/matches/${match.id}/offline-player`, {
@@ -1160,17 +1156,36 @@ function TeamAssignment({
                     <p className="text-xs font-medium text-muted-foreground">
                       {selectedPlayers.length
                         ? `${selectedPlayers.length} player${selectedPlayers.length === 1 ? "" : "s"} selected for ${pendingTeam === "home" ? "home" : "away"}`
-                        : "Pick one or more players, then add them in one step."}
+                        : playerLookup.status === "not-found"
+                          ? `Add this offline player to ${pendingTeam}.`
+                          : "Pick one or more players, or enter a phone number for an offline player."}
                     </p>
                     <Button
                       type="button"
                       className="min-w-40 shadow-sm"
-                      disabled={addingOfflinePlayer || !selectedPlayers.length}
-                      onClick={onAddSelectedPlayers}>
+                      disabled={
+                        addingOfflinePlayer ||
+                        playerLookup.status === "checking" ||
+                        playerLookup.alreadyAdded ||
+                        (selectedPlayers.length
+                          ? false
+                          : offlinePlayer.phone.trim().length < 10 ||
+                            (playerLookup.status !== "found" &&
+                              offlinePlayer.name.trim().length < 2))
+                      }
+                      onClick={
+                        selectedPlayers.length
+                          ? onAddSelectedPlayers
+                          : onAddOfflinePlayer
+                      }>
                       <Plus />
                       {addingOfflinePlayer
                         ? "Adding..."
-                        : `Finalize ${selectedPlayers.length || ""} player${selectedPlayers.length === 1 ? "" : "s"} to ${pendingTeam}`.trim()}
+                        : selectedPlayers.length
+                          ? `Finalize ${selectedPlayers.length} player${selectedPlayers.length === 1 ? "" : "s"} to ${pendingTeam}`
+                          : playerLookup.status === "found"
+                            ? `Add known player to ${pendingTeam}`
+                            : `Add offline player to ${pendingTeam}`}
                     </Button>
                   </div>
                 </div>
@@ -2370,6 +2385,7 @@ function ManageDrawer({
                 type="button"
                 variant="outline"
                 size="sm"
+                disabled={isCompleted}
                 onClick={() => {
                   setShowAddPlayer((visible) => !visible);
                   setPlayerSearch("");
@@ -2577,17 +2593,34 @@ function ManageDrawer({
                     <p className="text-xs font-medium text-muted-foreground">
                       {selectedPlayers.length
                         ? `${selectedPlayers.length} player${selectedPlayers.length === 1 ? "" : "s"} selected for ${pendingTeam === "home" ? "home" : "away"}`
-                        : "Pick one or more players, then add them in one step."}
+                        : playerLookup.status === "not-found"
+                          ? `Add this offline player to ${pendingTeam}.`
+                          : "Pick one or more players, or enter a phone number for an offline player."}
                     </p>
                     <Button
                       type="button"
                       className="min-w-40 shadow-sm"
-                      disabled={addingPlayer || !selectedPlayers.length}
-                      onClick={onAddSelectedPlayers}>
+                      disabled={
+                        addingPlayer ||
+                        playerLookup.status === "checking" ||
+                        playerLookup.alreadyAdded ||
+                        (selectedPlayers.length
+                          ? false
+                          : offlinePlayer.phone.trim().length < 10 ||
+                            (playerLookup.status !== "found" &&
+                              offlinePlayer.name.trim().length < 2))
+                      }
+                      onClick={
+                        selectedPlayers.length ? onAddSelectedPlayers : onAddPlayer
+                      }>
                       <Plus />
                       {addingPlayer
                         ? "Adding..."
-                        : `Finalize ${selectedPlayers.length || ""} player${selectedPlayers.length === 1 ? "" : "s"} to ${pendingTeam}`.trim()}
+                        : selectedPlayers.length
+                          ? `Finalize ${selectedPlayers.length} player${selectedPlayers.length === 1 ? "" : "s"} to ${pendingTeam}`
+                          : playerLookup.status === "found"
+                            ? `Add known player to ${pendingTeam}`
+                            : `Add offline player to ${pendingTeam}`}
                     </Button>
                   </div>
                 </div>
@@ -2612,7 +2645,7 @@ function ManageDrawer({
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={loading === `remove-${player.bookingId}`}
+                    disabled={isCompleted || loading === `remove-${player.bookingId}`}
                     onClick={() => onRemovePlayer(player.bookingId)}>
                     {loading === `remove-${player.bookingId}`
                       ? "Removing..."
@@ -2627,55 +2660,57 @@ function ManageDrawer({
               )}
             </div>
 
-            <div className="grid gap-3 rounded-2xl bg-secondary p-3">
-              <div>
-                <p className="text-sm font-bold">Shuffle teams</p>
-                <p className="text-xs text-muted-foreground">
-                  Move players between sides after the match if the lineup was
-                  recorded incorrectly.
-                </p>
-              </div>
-              <div className="grid gap-2">
-                {players.map((player) => (
-                  <div
-                    key={`${player.bookingId}-swap`}
-                    className="flex items-center justify-between gap-3 rounded-xl bg-card p-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold">
-                        {player.name}
-                      </p>
-                      <p className="truncate text-xs font-semibold text-muted-foreground">
-                        @{player.username || "player"} ·{" "}
-                        {assignments?.[player.bookingId] === "home"
-                          ? match.homeTeam
-                          : match.awayTeam}
-                      </p>
+            {!isCompleted && (
+              <div className="grid gap-3 rounded-2xl bg-secondary p-3">
+                <div>
+                  <p className="text-sm font-bold">Shuffle teams</p>
+                  <p className="text-xs text-muted-foreground">
+                    Move players between sides after the match if the lineup was
+                    recorded incorrectly.
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  {players.map((player) => (
+                    <div
+                      key={`${player.bookingId}-swap`}
+                      className="flex items-center justify-between gap-3 rounded-xl bg-card p-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-bold">
+                          {player.name}
+                        </p>
+                        <p className="truncate text-xs font-semibold text-muted-foreground">
+                          @{player.username || "player"} ·{" "}
+                          {assignments?.[player.bookingId] === "home"
+                            ? match.homeTeam
+                            : match.awayTeam}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          setAssignments((current) => ({
+                            ...current,
+                            [player.bookingId]:
+                              current[player.bookingId] === "home"
+                                ? "away"
+                                : "home",
+                          }))
+                        }>
+                        Switch side
+                      </Button>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        setAssignments((current) => ({
-                          ...current,
-                          [player.bookingId]:
-                            current[player.bookingId] === "home"
-                              ? "away"
-                              : "home",
-                        }))
-                      }>
-                      Switch side
-                    </Button>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                <Button
+                  type="button"
+                  disabled={loading === "lineup-save"}
+                  onClick={onSaveLineup}>
+                  {loading === "lineup-save" ? "Saving..." : "Save lineup"}
+                </Button>
               </div>
-              <Button
-                type="button"
-                disabled={loading === "lineup-save"}
-                onClick={onSaveLineup}>
-                {loading === "lineup-save" ? "Saving..." : "Save lineup"}
-              </Button>
-            </div>
+            )}
           </section>
         </div>
       </section>
