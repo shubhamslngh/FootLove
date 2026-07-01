@@ -580,7 +580,7 @@ export function MatchScoringConsole({
     team: assignments[player.bookingId] || player.team,
   }));
 
-  if (isCompleted) {
+  if (isCompleted && !canManageCompleted) {
     return (
       <div className="grid gap-4">
         <MatchStats match={liveMatch} players={activePlayers} />
@@ -640,7 +640,7 @@ export function MatchScoringConsole({
             side="home"
             name={liveMatch.homeTeam}
             score={liveMatch.homeScore}
-            disabled={isCompleted || Boolean(loading)}
+            disabled={(isCompleted && !canManageCompleted) || Boolean(loading)}
             onRemove={() => updateScore("home", -1)}
             onAdd={() => setGoalDrawer(createGoalDraft("home", activePlayers))}
           />
@@ -675,21 +675,25 @@ export function MatchScoringConsole({
             side="away"
             name={liveMatch.awayTeam}
             score={liveMatch.awayScore}
-            disabled={isCompleted || Boolean(loading)}
+            disabled={(isCompleted && !canManageCompleted) || Boolean(loading)}
             onRemove={() => updateScore("away", -1)}
             onAdd={() => setGoalDrawer(createGoalDraft("away", activePlayers))}
           />
         </div>
       </header>
 
-      <Button
-        className="w-full bg-violet-600 text-white hover:bg-violet-500"
-        disabled={Boolean(loading)}
-        onClick={() =>
-          control(liveMatch.phase === "half_time" ? "second_half" : "half_time")
-        }>
-        {liveMatch.phase === "half_time" ? "Start Second Half" : "Half Time"}
-      </Button>
+      {isLive && (
+        <Button
+          className="w-full bg-violet-600 text-white hover:bg-violet-500"
+          disabled={Boolean(loading)}
+          onClick={() =>
+            control(
+              liveMatch.phase === "half_time" ? "second_half" : "half_time",
+            )
+          }>
+          {liveMatch.phase === "half_time" ? "Start Second Half" : "Half Time"}
+        </Button>
+      )}
 
       <section
         className={`relative min-h-[420px] overflow-hidden rounded-2xl p-4 text-white ring-4 ring-white/70 ring-inset ${
@@ -814,7 +818,7 @@ export function MatchScoringConsole({
         <ToolButton
           icon={RotateCcw}
           label="Undo"
-          disabled={isCompleted || Boolean(loading)}
+          disabled={!isLive && !canManageCompleted ? true : Boolean(loading)}
           onClick={() => control("undo")}
         />
         <ToolButton
@@ -827,7 +831,7 @@ export function MatchScoringConsole({
       <Button
         variant="outline"
         className="w-full"
-        disabled={Boolean(loading)}
+        disabled={Boolean(loading) || (!isLive && !canManageCompleted)}
         onClick={finishMatch}>
         <Check /> {loading === "finish" ? "Finishing..." : "Finish match"}
       </Button>

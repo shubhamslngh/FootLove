@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { CreditCard, ListChecks, Settings, Swords, Users } from "lucide-react";
+import { CreditCard, Settings, Swords, Users } from "lucide-react";
 
 import { MatchManagementActions } from "@/components/match-management-actions";
+import { MatchScoringConsole } from "@/components/match-scoring-console";
 import { PlayerRosterItem } from "@/components/player-roster-item";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,8 +22,18 @@ export function MatchHostTabs({
   remaining,
   hostBooking,
   defaultTab = "players",
+  canUpdateScore = false,
 }) {
   const confirmed = bookings.filter((booking) => booking.status === "confirmed");
+  const players = confirmed.map((booking, index) => ({
+    bookingId: booking.id,
+    team: booking.team || (index % 2 === 0 ? "home" : "away"),
+    name:
+      booking.player?.name || booking.guestName || booking.guestUsername || "Unknown player",
+    username: booking.player?.username || booking.guestUsername,
+    phone: booking.player?.phone || booking.guestPhone,
+    isOffline: !booking.userId,
+  }));
   const paid = bookings.filter((booking) =>
     ["paid", "paid_pending_verification", "payment_claimed", "confirmed"].includes(
       booking.paymentStatus,
@@ -138,12 +149,22 @@ export function MatchHostTabs({
                 {match.homeScore ?? 0} : {match.awayScore ?? 0}
               </p>
             </div>
-            <Button asChild>
-              <Link href={`/matches/${match.id}/score`}>
-                <Swords />
-                {match.status === "completed" ? "View match stats" : "Open scoring"}
-              </Link>
-            </Button>
+            {canUpdateScore && match.status === "completed" ? (
+              <MatchScoringConsole
+                match={match}
+                players={players}
+                canManageCompleted
+              />
+            ) : (
+              <Button asChild>
+                <Link href={`/matches/${match.id}/score`}>
+                  <Swords />
+                  {match.status === "completed"
+                    ? "View match stats"
+                    : "Open scoring"}
+                </Link>
+              </Button>
+            )}
           </CardContent>
         </Card>
       </TabsContent>

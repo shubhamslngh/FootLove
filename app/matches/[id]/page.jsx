@@ -1,8 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Swords } from "lucide-react";
-
 import { AppShell } from "@/components/app-shell";
 import { MatchCard } from "@/components/match-card";
 import { MatchHostTabs } from "@/components/match-host-tabs";
@@ -107,13 +105,9 @@ export default async function MatchDetailPage({ params }) {
     (booking) => booking.status === "pending",
   ).length;
   const remaining = Math.max(0, match.capacity - match.booked - pendingCount);
-  const canScore =
-    Boolean(user) &&
-    (match.hostUserId === user.id || canManagePlatform(user.role));
   const canManage =
     Boolean(user) &&
     (match.hostUserId === user.id || canManagePlatform(user.role));
-  const canViewScore = match.status === "completed";
   const canBook = !user || canBookMatch(user.role);
   const existingBooking = user
     ? allBookings.find((booking) => booking.userId === user.id) || null
@@ -180,18 +174,6 @@ export default async function MatchDetailPage({ params }) {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {(canScore || canViewScore) && (
-              <Button asChild size="sm">
-                <Link href={`/matches/${match.id}/score`}>
-                  <Swords />
-                  {canViewScore
-                    ? "View score"
-                    : match.status === "live"
-                    ? "Open scoring"
-                    : "Set teams & kick off"}
-                </Link>
-              </Button>
-            )}
             <Link
               href="/matches"
               className="text-sm font-semibold text-primary hover:text-primary/80">
@@ -241,6 +223,7 @@ export default async function MatchDetailPage({ params }) {
                 bookings={hostBookings}
                 remaining={remaining}
                 hostBooking={existingBooking}
+                canUpdateScore={canManagePlatform(user.role)}
               />
             )}
           </div>

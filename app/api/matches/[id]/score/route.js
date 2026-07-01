@@ -71,6 +71,7 @@ export async function POST(request, { params }) {
   const { id } = await params;
   const { user, error } = await requireUser();
   if (error) return error;
+  const canManageCompleted = canManagePlatform(user.role);
 
   const body = await parseJson(request);
   const team = String(body?.team || "");
@@ -93,12 +94,20 @@ export async function POST(request, { params }) {
       result = { error: "Only this match host can update scoring", status: 403 };
       return db;
     }
-    if (match.status !== "live") {
-      result = { error: "Kick off the match before updating scores", status: 409 };
+    const canEditCompleted = canManageCompleted && match.status === "completed";
+    if (match.status !== "live" && !canEditCompleted) {
+      result = {
+        error: "Kick off the match before updating scores",
+        status: 409,
+      };
       return db;
     }
 
     if (finish) {
+      if (match.status !== "live") {
+        result = { error: "Only live matches can be finished", status: 409 };
+        return db;
+      }
       const leaderboardBefore = getLeaderboardByUserId(db);
       if (match.timerRunning && match.timerStartedAt) {
         match.elapsedSeconds =

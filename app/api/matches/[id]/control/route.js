@@ -36,7 +36,10 @@ export async function POST(request, { params }) {
       result = { error: "Only this match host can control play", status: 403 };
       return db;
     }
-    if (match.status !== "live") {
+    if (
+      match.status !== "live" &&
+      !(canManagePlatform(user.role) && match.status === "completed" && action === "undo")
+    ) {
       result = { error: "Match is not live", status: 409 };
       return db;
     }
